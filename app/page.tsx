@@ -38,6 +38,7 @@ export default function Home() {
   useEffect(() => { if (stage === "otp" || !authLanding) { setAuthLanding(false); return; } const timer = window.setTimeout(() => setAuthLanding(false), 3900); return () => window.clearTimeout(timer); }, [stage, authLanding]);
   const initials = useMemo(() => (user?.name || user?.email || "S").split(/\s|@/).filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase(), [user]);
   const clearFeedback = () => { setError(""); setNotice(""); };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- this whole helper moves into lib/api-client.ts next
   const api = async (path: string, options: RequestInit = {}, retry = true): Promise<any> => {
     const headers = new Headers(options.headers); headers.set("Content-Type", "application/json"); if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     let response = await fetch(`${API}${path}`, { ...options, headers });
