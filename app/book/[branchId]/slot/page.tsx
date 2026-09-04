@@ -75,7 +75,7 @@ export default function ChooseSlotPage() {
   const continueToSummary = () => {
     if (!selectedSlot) return;
     setSlot(toISODate(selectedDate), selectedSlot.slotId, `${formatTime12h(selectedSlot.startTime)} – ${formatTime12h(selectedSlot.endTime)}`);
-    router.push(`/book/${branchId}/summary`);
+    router.push(`/book/${branchId}/checkout`);
   };
 
   return (

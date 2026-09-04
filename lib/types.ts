@@ -61,3 +61,17 @@ export type AvailableSlot = {
   endTime: string;
   available: boolean;
 };
+
+// POST /payments/coupons/validate response — preview only, see the note in
+// app/book/[branchId]/checkout/page.tsx about why it isn't deducted from the
+// booking total.
+export type CouponValidation = {
+  valid: boolean;
+  discount: number;
+};
+
+// POST /bookings response — bare, no envelope, per frontend_handover.md.
+export type BookingCreateResult = {
+  bookingId: string;
+  status: string;
+};
