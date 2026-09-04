@@ -142,6 +142,36 @@ export type PaymentVerifyResult = {
 // GET /payments/my-payments row (payment.service.ts's toPaymentDTO) — used
 // only to check whether a booking already has a SUCCESS payment, so
 // booking-card.tsx doesn't keep offering "Pay Now" after payment succeeded.
+// review.types.ts's ReviewDTO. `review` (text) is optional per the backend's
+// zod schema — ratings are the only required fields.
+export type Review = {
+  id: string;
+  bookingId: string;
+  customerId: string | null;
+  salonId: string;
+  branchId: string;
+  staffId: string | null;
+  overallRating: number;
+  review: string | null;
+  serviceRating: number | null;
+  staffRating: number | null;
+  hygieneRating: number | null;
+  ambienceRating: number | null;
+  productRating: number | null;
+  isEdited: boolean;
+  createdAt: string;
+  reply?: { message: string; createdAt: string } | null;
+};
+
+export type ReviewRatings = {
+  overallRating: number;
+  serviceRating: number;
+  staffRating: number;
+  hygieneRating: number;
+  ambienceRating: number;
+  productRating: number;
+};
+
 export type Payment = {
   id: string;
   bookingId: string;

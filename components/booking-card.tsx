@@ -80,6 +80,17 @@ export function BookingCard({
         <p className="mt-2 text-xs text-muted-foreground">Reason: {booking.cancellationReason || booking.rejectionReason}</p>
       )}
 
+      {booking.bookingStatus === "COMPLETED" && (
+        <div className="mt-4 flex gap-2">
+          <Button size="sm" className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push(`/bookings/${booking.id}/review`)}>
+            Leave a Review
+          </Button>
+          <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/reviews/salon/${booking.salonId}`)}>
+            Salon Reviews
+          </Button>
+        </div>
+      )}
+
       {isUpcoming && (
         <div className="mt-4 flex gap-2">
           {booking.bookingStatus === "APPROVED" &&

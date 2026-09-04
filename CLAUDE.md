@@ -8,6 +8,7 @@ Customer-facing web app for the Salonjaa salon discovery/booking platform. Next.
 2. **`../salonjaa-backend/docs/PROGRESS.md`** — what the backend actually has built and tested right now, module by module. If a screen needs an endpoint that isn't in a "Done and tested" module here, it can't be wired up yet — see "Scope" below.
 3. **`docs/designs/`** — the mobile design screenshots (`01-auth-screen.jpeg` … `12-user-bookings.jpeg`, plus `light_mode_all_pages.jpeg` — the light-theme variant of all 12). Reference these before building or restyling any screen.
 4. **`docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md`** — a not-yet-implemented contract this frontend drafted for the backend to build, since no public/customer endpoint exists anywhere to list or read a salon/branch/service today (every `GET /salons`, `/branches`, `/services` route is Salon-Owner-scoped). Home, Explore, Salon Details, and Select Services are blocked on this shipping. Also covers a second, smaller gap found while building My Bookings: booking responses carry `salonId`/`branchId`/`selectedStaffId` but never a resolved name.
+5. **`docs/KNOWN_BACKEND_LIMITATIONS.md`** — behavioral gaps in currently-live endpoints found while building (coupons can never actually attach to a booking; a payment left open in the Razorpay widget can never be retried). Not missing endpoints like the file above — real constraints of how the live ones behave.
 
 ## Tech stack decisions
 
@@ -23,6 +24,8 @@ Customer-facing web app for the Salonjaa salon discovery/booking platform. Next.
 - **Real Razorpay Standard Checkout integration** (`lib/razorpay.ts`) — the widget script loads from Razorpay's own CDN at call time (their documented integration, not something to swap for a bundled copy). `POST /payments/create-order` returns `amount` in rupees; Razorpay's checkout options need paise, so `app/bookings/[bookingId]/pay/page.tsx` multiplies by 100 itself — don't skip that conversion. Needs `NEXT_PUBLIC_RAZORPAY_KEY_ID` set (see "Environment" below) or the widget fails to load.
 - **`bookingStatus` never reflects payment.** There's no `AWAITING_PAYMENT` state — an `APPROVED` booking stays `APPROVED` even after a successful payment. So "has this been paid" is answered by cross-referencing `GET /payments/my-payments` (`components/booking-card.tsx`'s `paid` prop, computed in `app/(tabs)/bookings/page.tsx`), not by booking status alone. Both the pay and confirmed pages independently re-check this (via the same endpoint) before showing their content, so landing on either page directly with no real payment doesn't show a false state.
 - **A payment left open in the Razorpay widget (closed without completing) can't be retried today** — the payment row stays `PENDING` forever (no webhook, no timeout), and `POST /payments/create-order` only allows a retry once a payment is `FAILED`. This is a real backend gap, not a frontend bug; `pay/page.tsx`'s `ondismiss` notice says so rather than implying retry always works.
+- **No "my reviews" or "review status for this booking" endpoint exists** — whether a completed booking already has a review (and, if so, its `reviewId` for editing) is discovered by fetching the public `GET /reviews/salon/:salonId` list and matching on `bookingId` (`app/bookings/[bookingId]/review/page.tsx`). This is real data via a real live endpoint, not a workaround around missing auth — don't add a fabricated "my reviews" cache instead.
+- **A salon's public review list (`app/reviews/salon/[salonId]/page.tsx`) is reachable without the blocked browse contract** — any known `salonId` (from a booking) is enough; it doesn't need Salon Details to exist first. The aggregate rating shown there is computed client-side from the same rows, not a fabricated summary field the API doesn't return.
 
 ## Folder structure
 
@@ -49,24 +52,27 @@ app/
     reschedule/page.tsx             # POST /bookings/:id/reschedule-request, reuses SlotPicker
     pay/page.tsx                    # docs/designs/09 — Razorpay Standard Checkout, only for APPROVED bookings
     confirmed/page.tsx              # docs/designs/10 — only reachable once a SUCCESS payment actually exists
+    review/page.tsx                 # POST /reviews (create) or PATCH /reviews/:id (edit) — only for COMPLETED bookings
+  reviews/salon/[salonId]/page.tsx  # public GET /reviews/salon/:salonId listing + report action
 components/
   ui/                # shadcn-generated primitives — don't hand-edit, re-run `npx shadcn add` instead
   auth-screen.tsx, profile-menu.tsx, address-list.tsx, address-form-dialog.tsx,
   theme-provider.tsx, theme-toggle.tsx, bottom-nav.tsx, coming-soon.tsx,
   slot-picker.tsx, checkout-auth-step.tsx, checkout-basic-details-step.tsx,
-  booking-card.tsx, cancel-booking-dialog.tsx
+  booking-card.tsx, cancel-booking-dialog.tsx, star-rating.tsx, report-review-dialog.tsx
 hooks/
   use-account.ts        # all state + handlers for the Auth/Profile/Address flow
   account-context.tsx    # React context wrapping useAccount() for use across routes
   booking-draft-context.tsx  # client-side browse-to-book selection state
 lib/
   api-client.ts        # see "API calls" below
-  types.ts             # User / Address / AddressFormValues / Booking / BookingDetail / Payment / availability & coupon types
+  types.ts             # User / Address / AddressFormValues / Booking / BookingDetail / Payment / Review / availability & coupon types
   utils.ts             # shadcn's cn() helper, date/time formatting, downloadBookingICS
   razorpay.ts          # Standard Checkout widget loader + open() wrapper
 docs/
   designs/                              # mobile design screenshots, numbered 01-12 + light_mode_all_pages
   PROPOSED_PUBLIC_BROWSE_CONTRACT.md    # drafted, not yet implemented — see above
+  KNOWN_BACKEND_LIMITATIONS.md          # behavioral gaps in live endpoints — see above
 ```
 
 ## API calls go through `lib/api-client.ts` — no exceptions
@@ -77,7 +83,7 @@ docs/
 
 Backend is far along now (see `../salonjaa-backend/docs/PROGRESS.md`): Auth, User+Address, Salon+Branch, Staff+Services, Availability+Booking, Payment+Coupon, Reviews are all 🟢 Live; Admin is partial. Despite that, four design screens (Home `02`, Nearby Salons `04`, Salon Details `03`, Select Services `05`) have **nothing to call** — every salon/branch/service read is Salon-Owner-scoped, not public. Those stay placeholders (`components/coming-soon.tsx`) until `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md` is implemented.
 
-Choose Stylist (`06`), Choose Slot (`07`), Checkout (`08`), Payment (`09`), Booking Confirmed (`10`), and My Bookings (`12`) are all built (Modules 4/5/6/7) against live endpoints and don't need that contract. Reviews (not in the numbered designs) is the next candidate that doesn't need the browse contract either.
+Choose Stylist (`06`), Choose Slot (`07`), Checkout (`08`), Payment (`09`), Booking Confirmed (`10`), My Bookings (`12`), and Reviews (not in the numbered designs — Module 8) are all built against live endpoints and don't need that contract.
 
 The Profile menu's disabled rows (My Wallet, Payment Methods, Refer & Earn, Help & Support, Settings) and the Offers tab stay disabled/placeholder for the same reason: **don't wire disabled or placeholder screens to fake data or invented endpoints.** Build them out only once their backend module ships and `frontend_handover.md` documents the contract.
 
