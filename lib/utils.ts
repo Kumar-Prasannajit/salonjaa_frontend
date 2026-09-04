@@ -31,3 +31,35 @@ export function formatDateTime(iso: string) {
   const timeLabel = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   return `${dateLabel} • ${timeLabel}`;
 }
+
+function toICSDate(iso: string) {
+  return new Date(iso).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+// Builds a minimal .ics file client-side from a confirmed booking's own
+// data (no backend endpoint for this — none is documented) and triggers a
+// download. Every field here is real booking data; nothing fabricated.
+export function downloadBookingICS(booking: { bookingNumber: string; scheduledStart: string; scheduledEnd: string; serviceNames: string[] }) {
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Salonjaa//Booking//EN",
+    "BEGIN:VEVENT",
+    `UID:${booking.bookingNumber}@salonjaa`,
+    `DTSTAMP:${toICSDate(new Date().toISOString())}`,
+    `DTSTART:${toICSDate(booking.scheduledStart)}`,
+    `DTEND:${toICSDate(booking.scheduledEnd)}`,
+    `SUMMARY:Salonjaa — ${booking.serviceNames.join(", ")}`,
+    `DESCRIPTION:Booking ${booking.bookingNumber}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const blob = new Blob([ics], { type: "text/calendar" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${booking.bookingNumber}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+}

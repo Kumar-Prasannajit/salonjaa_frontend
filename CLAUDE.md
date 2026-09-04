@@ -20,6 +20,9 @@ Customer-facing web app for the Salonjaa salon discovery/booking platform. Next.
 - **A customer cannot pay immediately after booking.** `POST /payments/create-order` requires the booking to already be `APPROVED` by the salon (PROGRESS.md's Module 7 note: "if salon owner approves then customer will pay"). So Checkout's CTA is "Confirm Booking Request", not "Proceed to Payment" as the design literally shows — real payment is a separate later action (`components/booking-card.tsx`'s "Pay Now", shown only on `APPROVED` bookings in My Bookings). Don't reintroduce an immediate pay-at-checkout flow without a corresponding backend change.
 - **Coupon validation is informational only.** `POST /payments/coupons/validate` is real and live, but no endpoint anywhere attaches a coupon to a booking — Checkout shows the validated discount with a disclaimer rather than deducting it from the total, since deducting it would misrepresent what payment will actually charge later.
 - **Bookings have no resolved salon/branch/staff names** (see `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md`'s second section) — `components/booking-card.tsx` uses the booking's own `bookingNumber` as its title instead of a salon name/photo, and omits the professional's name entirely rather than showing a raw UUID.
+- **Real Razorpay Standard Checkout integration** (`lib/razorpay.ts`) — the widget script loads from Razorpay's own CDN at call time (their documented integration, not something to swap for a bundled copy). `POST /payments/create-order` returns `amount` in rupees; Razorpay's checkout options need paise, so `app/bookings/[bookingId]/pay/page.tsx` multiplies by 100 itself — don't skip that conversion. Needs `NEXT_PUBLIC_RAZORPAY_KEY_ID` set (see "Environment" below) or the widget fails to load.
+- **`bookingStatus` never reflects payment.** There's no `AWAITING_PAYMENT` state — an `APPROVED` booking stays `APPROVED` even after a successful payment. So "has this been paid" is answered by cross-referencing `GET /payments/my-payments` (`components/booking-card.tsx`'s `paid` prop, computed in `app/(tabs)/bookings/page.tsx`), not by booking status alone. Both the pay and confirmed pages independently re-check this (via the same endpoint) before showing their content, so landing on either page directly with no real payment doesn't show a false state.
+- **A payment left open in the Razorpay widget (closed without completing) can't be retried today** — the payment row stays `PENDING` forever (no webhook, no timeout), and `POST /payments/create-order` only allows a retry once a payment is `FAILED`. This is a real backend gap, not a frontend bug; `pay/page.tsx`'s `ondismiss` notice says so rather than implying retry always works.
 
 ## Folder structure
 
@@ -44,7 +47,8 @@ app/
       requested/page.tsx            # honest pending-approval state (not the literal "Booking Confirmed" design 10)
   bookings/[bookingId]/
     reschedule/page.tsx             # POST /bookings/:id/reschedule-request, reuses SlotPicker
-    pay/page.tsx                    # placeholder — Module 6 builds the real Razorpay flow here
+    pay/page.tsx                    # docs/designs/09 — Razorpay Standard Checkout, only for APPROVED bookings
+    confirmed/page.tsx              # docs/designs/10 — only reachable once a SUCCESS payment actually exists
 components/
   ui/                # shadcn-generated primitives — don't hand-edit, re-run `npx shadcn add` instead
   auth-screen.tsx, profile-menu.tsx, address-list.tsx, address-form-dialog.tsx,
@@ -57,8 +61,9 @@ hooks/
   booking-draft-context.tsx  # client-side browse-to-book selection state
 lib/
   api-client.ts        # see "API calls" below
-  types.ts             # User / Address / AddressFormValues / Booking / BookingDetail / availability & coupon types
-  utils.ts             # shadcn's cn() helper, date/time formatting
+  types.ts             # User / Address / AddressFormValues / Booking / BookingDetail / Payment / availability & coupon types
+  utils.ts             # shadcn's cn() helper, date/time formatting, downloadBookingICS
+  razorpay.ts          # Standard Checkout widget loader + open() wrapper
 docs/
   designs/                              # mobile design screenshots, numbered 01-12 + light_mode_all_pages
   PROPOSED_PUBLIC_BROWSE_CONTRACT.md    # drafted, not yet implemented — see above
@@ -72,7 +77,7 @@ docs/
 
 Backend is far along now (see `../salonjaa-backend/docs/PROGRESS.md`): Auth, User+Address, Salon+Branch, Staff+Services, Availability+Booking, Payment+Coupon, Reviews are all 🟢 Live; Admin is partial. Despite that, four design screens (Home `02`, Nearby Salons `04`, Salon Details `03`, Select Services `05`) have **nothing to call** — every salon/branch/service read is Salon-Owner-scoped, not public. Those stay placeholders (`components/coming-soon.tsx`) until `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md` is implemented.
 
-Choose Stylist (`06`), Choose Slot (`07`), Checkout (`08`), and My Bookings (`12`) are built (Modules 4/5/7) against live endpoints and don't need that contract. Payment (`09`) and the real Booking Confirmed (`10`) are Module 6, not yet built — `app/bookings/[bookingId]/pay` is currently a placeholder reachable from an `APPROVED` booking's "Pay Now" button.
+Choose Stylist (`06`), Choose Slot (`07`), Checkout (`08`), Payment (`09`), Booking Confirmed (`10`), and My Bookings (`12`) are all built (Modules 4/5/6/7) against live endpoints and don't need that contract. Reviews (not in the numbered designs) is the next candidate that doesn't need the browse contract either.
 
 The Profile menu's disabled rows (My Wallet, Payment Methods, Refer & Earn, Help & Support, Settings) and the Offers tab stay disabled/placeholder for the same reason: **don't wire disabled or placeholder screens to fake data or invented endpoints.** Build them out only once their backend module ships and `frontend_handover.md` documents the contract.
 
@@ -90,4 +95,6 @@ npx shadcn add <component>   # add another shadcn/ui component
 
 ## Environment
 
-Copy `.env.example` to `.env.local` and set `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:4000/api/v1` if unset) to point at a running instance of `../salonjaa-backend`.
+Copy `.env.example` to `.env.local` and set:
+- `NEXT_PUBLIC_API_URL` (defaults to `http://localhost:4000/api/v1` if unset) — a running instance of `../salonjaa-backend`.
+- `NEXT_PUBLIC_RAZORPAY_KEY_ID` — must match the backend's `RAZORPAY_KEY_ID` (its `.env`). This is Razorpay's public `key_id`, not the secret — safe client-side, same trust model as a Stripe publishable key. Payment (`app/bookings/[bookingId]/pay`) fails to load the checkout widget without it.

@@ -123,3 +123,36 @@ export type BookingServiceLine = {
 };
 
 export type BookingDetail = Booking & { services: BookingServiceLine[] };
+
+// POST /payments/create-order response. `amount` is in rupees (same unit as
+// booking.totalAmount) per the backend's payment.service.ts — Razorpay's
+// checkout widget needs paise, so the caller must multiply by 100 itself.
+export type PaymentOrder = {
+  orderId: string;
+  amount: number;
+  currency: string;
+};
+
+// POST /payments/verify response.
+export type PaymentVerifyResult = {
+  success: true;
+  paymentStatus: string;
+};
+
+// GET /payments/my-payments row (payment.service.ts's toPaymentDTO) — used
+// only to check whether a booking already has a SUCCESS payment, so
+// booking-card.tsx doesn't keep offering "Pay Now" after payment succeeded.
+export type Payment = {
+  id: string;
+  bookingId: string;
+  customerId: string;
+  method: string;
+  provider: string;
+  providerOrderId: string | null;
+  providerPaymentId: string | null;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "SUCCESS" | "FAILED";
+  paidAt: string | null;
+  createdAt: string;
+};

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, CheckCircle2 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import type { Booking, BookingDetail } from "@/lib/types";
 import { Card } from "@/components/ui/card";
@@ -26,11 +26,16 @@ const STATUS_STYLE: Record<Booking["bookingStatus"], { label: string; className:
 export function BookingCard({
   booking,
   detail,
+  paid,
   onCancel,
   cancelling,
 }: {
   booking: Booking;
   detail?: BookingDetail;
+  // bookingStatus never changes on a successful payment (no AWAITING_PAYMENT
+  // state exists), so this comes from a separate GET /payments/my-payments
+  // lookup — see app/(tabs)/bookings/page.tsx's loadBookings().
+  paid: boolean;
   onCancel: (booking: Booking) => void;
   cancelling: boolean;
 }) {
@@ -77,15 +82,21 @@ export function BookingCard({
 
       {isUpcoming && (
         <div className="mt-4 flex gap-2">
-          {booking.bookingStatus === "APPROVED" && (
-            <Button
-              size="sm"
-              className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
-              onClick={() => router.push(`/bookings/${booking.id}/pay`)}
-            >
-              Pay Now
-            </Button>
-          )}
+          {booking.bookingStatus === "APPROVED" &&
+            (paid ? (
+              <span className="flex flex-1 items-center justify-center gap-1.5 text-sm font-medium text-success">
+                <CheckCircle2 className="size-4" />
+                Paid
+              </span>
+            ) : (
+              <Button
+                size="sm"
+                className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+                onClick={() => router.push(`/bookings/${booking.id}/pay`)}
+              >
+                Pay Now
+              </Button>
+            ))}
           <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/bookings/${booking.id}/reschedule`)}>
             Reschedule
           </Button>

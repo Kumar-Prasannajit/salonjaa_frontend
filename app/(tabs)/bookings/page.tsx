@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarOff, Lock } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
-import type { Booking, BookingDetail } from "@/lib/types";
+import type { Booking, BookingDetail, Payment } from "@/lib/types";
 import { useAccountContext } from "@/hooks/account-context";
 import { BookingCard } from "@/components/booking-card";
 import { CancelBookingDialog } from "@/components/cancel-booking-dialog";
@@ -36,6 +36,7 @@ export default function BookingsPage() {
   const [error, setError] = useState("");
   const [details, setDetails] = useState<Record<string, BookingDetail>>({});
   const requestedDetailIds = useRef(new Set<string>());
+  const [paidBookingIds, setPaidBookingIds] = useState<Set<string>>(new Set());
 
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
@@ -44,8 +45,14 @@ export default function BookingsPage() {
   const loadBookings = async () => {
     setError("");
     try {
-      const result = await apiFetch<{ data: Booking[] }>("/bookings/my-bookings");
-      setBookings(result.data);
+      const [bookingsResult, paymentsResult] = await Promise.all([
+        apiFetch<{ data: Booking[] }>("/bookings/my-bookings"),
+        // Needed only so an already-paid APPROVED booking stops offering "Pay
+        // Now" — bookingStatus alone never changes on successful payment.
+        apiFetch<{ data: Payment[] }>("/payments/my-payments"),
+      ]);
+      setBookings(bookingsResult.data);
+      setPaidBookingIds(new Set(paymentsResult.data.filter((p) => p.status === "SUCCESS").map((p) => p.bookingId)));
     } catch (e) {
       setError(messageFromError(e));
     }
@@ -160,7 +167,14 @@ export default function BookingsPage() {
         )}
 
         {activeList.map((b) => (
-          <BookingCard key={b.id} booking={b} detail={details[b.id]} onCancel={setCancelTarget} cancelling={cancelBusy && cancelTarget?.id === b.id} />
+          <BookingCard
+            key={b.id}
+            booking={b}
+            detail={details[b.id]}
+            paid={paidBookingIds.has(b.id)}
+            onCancel={setCancelTarget}
+            cancelling={cancelBusy && cancelTarget?.id === b.id}
+          />
         ))}
       </div>
 
