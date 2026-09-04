@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AccountProvider } from "@/hooks/account-context";
 
 // Self-hosted via next/font instead of the old @import url(fonts.googleapis.com...)
 // in globals.css. Playfair Display was dropped: the real designs (docs/designs/)
@@ -22,8 +24,15 @@ export const metadata: Metadata = { title: "Salonjaa", description: "Your person
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${dmMono.variable}`}>
-      <body>{children}</body>
+    // suppressHydrationWarning is next-themes' documented requirement: it
+    // sets the resolved theme's class on <html> before React hydrates, which
+    // would otherwise flag as a server/client mismatch.
+    <html lang="en" className={`${dmSans.variable} ${dmMono.variable}`} suppressHydrationWarning>
+      <body>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <AccountProvider>{children}</AccountProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

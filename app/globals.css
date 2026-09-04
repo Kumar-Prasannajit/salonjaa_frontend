@@ -2,18 +2,53 @@
 @import "tw-animate-css";
 
 /*
- * Design tokens sourced directly from docs/designs/*.jpeg. All 12 real
- * product screens use a single dark charcoal + gold system — there is no
- * light theme anywhere in the actual designs, so unlike a typical shadcn
- * setup this is the only palette; there's no .dark variant to toggle.
- * Values are close visual approximations of the screenshots, not exact
- * pixel-sampled hex codes. peach/rose/paper from the old pre-Tailwind CSS
- * don't appear in any real screen and were dropped rather than carried
- * over — see frontend/CLAUDE.md for the reasoning.
+ * Design tokens sourced from docs/designs/*.jpeg. Originally this app shipped
+ * dark-only (see git history) because all 12 numbered screens only existed in
+ * a dark charcoal + gold system. docs/designs/light_mode_all_pages.jpeg later
+ * supplied a full light variant of every screen, so this is now a real
+ * two-theme system: :root holds the light palette (default), .dark overrides
+ * it. Toggled via next-themes (class strategy) — see components/theme-provider.tsx
+ * and components/theme-toggle.tsx. Values are close visual approximations of
+ * the screenshots, not exact pixel-sampled hex codes, same as before.
  */
 :root {
   --radius: 1rem;
 
+  --background: #fbf7ef;
+  --foreground: #201807;
+  --card: #ffffff;
+  --card-foreground: #201807;
+  --popover: #ffffff;
+  --popover-foreground: #201807;
+  --primary: #b8842a;
+  --primary-foreground: #201807;
+  --secondary: #f2e9d8;
+  --secondary-foreground: #201807;
+  --muted: #f5efe4;
+  --muted-foreground: #6b6255;
+  --accent: #b8842a;
+  --accent-foreground: #201807;
+  --destructive: #c13b32;
+  --destructive-foreground: #ffffff;
+  --border: #e7dcc7;
+  --input: #e7dcc7;
+  --ring: #b8842a;
+
+  /* Success text color: "Confirmed" status, discount amounts. No shadcn
+     equivalent by default — kept as a named extension. */
+  --success: #4f7a34;
+
+  /* The two-stop gradient used on every primary CTA pill in the designs
+     (e.g. "Book Now", "Pay ₹1,000"). Brand-constant gold, same in both
+     themes — only --primary/--accent (text/icon gold) shift for contrast. */
+  --gold: #d9a044;
+  --gold-bright: #e9c17a;
+
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+.dark {
   --background: #0c0d10;
   --foreground: #f5f3ef;
   --card: #17181d;
@@ -34,18 +69,7 @@
   --input: #26272c;
   --ring: #d9a044;
 
-  /* Success text color: "Confirmed" status, discount amounts. No shadcn
-     equivalent by default — kept as a named extension. */
   --success: #9bc46a;
-
-  /* The two-stop gradient used on every primary CTA pill in the designs
-     (e.g. "Book Now", "Pay ₹1,000"). --primary is the flat gold used for
-     badges/links/selected-state borders; buttons use the gradient. */
-  --gold: #d9a044;
-  --gold-bright: #e9c17a;
-
-  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
 @theme inline {
