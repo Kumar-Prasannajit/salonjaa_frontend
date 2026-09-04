@@ -7,41 +7,58 @@ Customer-facing web app for the Salonjaa salon discovery/booking platform. Next.
 1. **`../salonjaa-backend/docs/frontend_handover.md`** — the API contract source of truth: routes, request bodies, response shapes, auth requirements, and a 🟢 Live / ⚪ Not built status per section. Build only what's marked 🟢 Live. **This repo's own root `frontend_handover.md` is a stale Aug-26 snapshot — don't read it, it predates almost everything the backend has since shipped.**
 2. **`../salonjaa-backend/docs/PROGRESS.md`** — what the backend actually has built and tested right now, module by module. If a screen needs an endpoint that isn't in a "Done and tested" module here, it can't be wired up yet — see "Scope" below.
 3. **`docs/designs/`** — the mobile design screenshots (`01-auth-screen.jpeg` … `12-user-bookings.jpeg`, plus `light_mode_all_pages.jpeg` — the light-theme variant of all 12). Reference these before building or restyling any screen.
-4. **`docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md`** — a not-yet-implemented contract this frontend drafted for the backend to build, since no public/customer endpoint exists anywhere to list or read a salon/branch/service today (every `GET /salons`, `/branches`, `/services` route is Salon-Owner-scoped). Home, Explore, Salon Details, and Select Services are blocked on this shipping.
+4. **`docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md`** — a not-yet-implemented contract this frontend drafted for the backend to build, since no public/customer endpoint exists anywhere to list or read a salon/branch/service today (every `GET /salons`, `/branches`, `/services` route is Salon-Owner-scoped). Home, Explore, Salon Details, and Select Services are blocked on this shipping. Also covers a second, smaller gap found while building My Bookings: booking responses carry `salonId`/`branchId`/`selectedStaffId` but never a resolved name.
 
 ## Tech stack decisions
 
 - **Tailwind v4 + shadcn/ui, Radix base.** Theme lives entirely in `app/globals.css` as CSS variables — no `tailwind.config.ts` (v4 doesn't need one). **Two themes now**: `docs/designs/light_mode_all_pages.jpeg` supplied a full light re-skin of every screen, so this is a real light/dark system — `:root` holds the light palette (default), `.dark` overrides it. Toggled via `next-themes` (class strategy, `defaultTheme="dark"` since the brand's primary identity is the dark+gold look, `enableSystem` so OS preference is still honored when no explicit choice is stored) — see `components/theme-provider.tsx` (wraps `next-themes` in `app/layout.tsx`) and `components/theme-toggle.tsx` (icon button in the tabs shell header, persisted to `localStorage` by `next-themes` itself). No design specifies where the toggle control lives — it was placed in the shell header as the most discoverable always-on spot; revisit if a design ever shows one explicitly.
 - **Fonts via `next/font/google`** (`app/layout.tsx`): DM Sans (`--font-sans`) and DM Mono (`--font-mono`), self-hosted rather than the external `@import url(fonts.googleapis.com...)` the app originally used. Playfair Display was dropped — the designs use a plain UI sans everywhere; the "SALONJAA" wordmark is a logo graphic, not live text in a display serif.
 - **Real routing (App Router), introduced once the flow grew past a single screen.** The `(tabs)` route group (`app/(tabs)/layout.tsx`) renders the shared header + `BottomNav` around the 5 bottom-nav destinations (`/`, `/bookings`, `/explore`, `/offers`, `/profile`); everything else (booking-flow drill-ins, `/profile/addresses`) lives outside that group with no tab bar, matching how those screens are drawn in the designs (full-screen with a back arrow, not a persistent tab bar).
-- **Browsing is anonymous; auth is deferred to checkout.** Decided this session: a customer can browse Home → Explore → Salon Details → Select Services → Choose Stylist → Choose Slot without signing in. `AuthScreen` no longer gates the whole app — it now renders inline on `/profile` when signed out, and will render again (or via a shared step) right before `POST /bookings` at Checkout once Module 5 is built. If `GET /users/me` comes back with no `name`, collect basic details (`PATCH /users/me`) as one extra step before payment.
-- **`useAccount()` is hoisted into a context** (`hooks/account-context.tsx`, `AccountProvider`/`useAccountContext`) at the root layout, not called once inside a single page component — necessary once Profile, Saved Addresses, and (later) checkout are separate routes that all need the same session state without prop-drilling.
+- **Browsing is anonymous; auth is deferred to checkout.** A customer can browse Home → Explore → Salon Details → Select Services → Choose Stylist → Choose Slot without signing in. `AuthScreen` no longer gates the whole app — it renders inline on `/profile` when signed out, and a compact variant (`components/checkout-auth-step.tsx`) renders again at Checkout, right before `POST /bookings`. If `GET /users/me` comes back with no `name`, `components/checkout-basic-details-step.tsx` collects it (`PATCH /users/me`) as one extra step first.
+- **`useAccount()` is hoisted into a context** (`hooks/account-context.tsx`, `AccountProvider`/`useAccountContext`) at the root layout, not called once inside a single page component — necessary since Profile, Saved Addresses, Checkout, and My Bookings are all separate routes that need the same session state without prop-drilling.
+- **`useBookingDraft()` context** (`hooks/booking-draft-context.tsx`) holds the in-progress browse-to-book selection (branch/salon, services, stylist, slot) across `/book/[branchId]/*` routes — nothing here persists server-side until Checkout's `POST /bookings` actually creates the booking. Lost on reload, same tradeoff as the auth tokens.
+- **A customer cannot pay immediately after booking.** `POST /payments/create-order` requires the booking to already be `APPROVED` by the salon (PROGRESS.md's Module 7 note: "if salon owner approves then customer will pay"). So Checkout's CTA is "Confirm Booking Request", not "Proceed to Payment" as the design literally shows — real payment is a separate later action (`components/booking-card.tsx`'s "Pay Now", shown only on `APPROVED` bookings in My Bookings). Don't reintroduce an immediate pay-at-checkout flow without a corresponding backend change.
+- **Coupon validation is informational only.** `POST /payments/coupons/validate` is real and live, but no endpoint anywhere attaches a coupon to a booking — Checkout shows the validated discount with a disclaimer rather than deducting it from the total, since deducting it would misrepresent what payment will actually charge later.
+- **Bookings have no resolved salon/branch/staff names** (see `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md`'s second section) — `components/booking-card.tsx` uses the booking's own `bookingNumber` as its title instead of a salon name/photo, and omits the professional's name entirely rather than showing a raw UUID.
 
 ## Folder structure
 
 ```text
 app/
-  layout.tsx, globals.css        # root: fonts, ThemeProvider, AccountProvider
+  layout.tsx, globals.css        # root: fonts, ThemeProvider, AccountProvider, BookingDraftProvider
   (tabs)/
     layout.tsx                    # shared header + BottomNav
     page.tsx                      # "/"        Home            — placeholder, blocked on browse contract
-    explore/page.tsx              # "/explore" Explore/search  — placeholder, blocked on browse contract
-    bookings/page.tsx             # "/bookings" My Bookings    — placeholder, Module 7
+    explore/page.tsx              # "/explore" Explore/search  — placeholder, blocked on browse contract; dev-only link to /book/start
+    bookings/page.tsx             # "/bookings" My Bookings    — tabs (Upcoming/Completed/Cancelled), cancel action
     offers/page.tsx               # "/offers"  Offers          — placeholder, no contract at all
     profile/page.tsx              # "/profile" AuthScreen (signed out) or ProfileMenu (signed in)
   profile/
     addresses/page.tsx            # "/profile/addresses" — no tab bar; redirects to /profile if signed out
+  book/
+    start/page.tsx                 # DEV-ONLY, temporary — manual branchId/salonId/services entry, stands in for Module 3
+    [branchId]/
+      stylist/page.tsx              # docs/designs/06 — GET /availability/staff
+      slot/page.tsx                 # docs/designs/07 — SlotPicker + GET /availability/slots
+      checkout/page.tsx             # docs/designs/08 — auth/basic-details steps, coupon preview, POST /bookings
+      requested/page.tsx            # honest pending-approval state (not the literal "Booking Confirmed" design 10)
+  bookings/[bookingId]/
+    reschedule/page.tsx             # POST /bookings/:id/reschedule-request, reuses SlotPicker
+    pay/page.tsx                    # placeholder — Module 6 builds the real Razorpay flow here
 components/
   ui/                # shadcn-generated primitives — don't hand-edit, re-run `npx shadcn add` instead
   auth-screen.tsx, profile-menu.tsx, address-list.tsx, address-form-dialog.tsx,
-  theme-provider.tsx, theme-toggle.tsx, bottom-nav.tsx, coming-soon.tsx
+  theme-provider.tsx, theme-toggle.tsx, bottom-nav.tsx, coming-soon.tsx,
+  slot-picker.tsx, checkout-auth-step.tsx, checkout-basic-details-step.tsx,
+  booking-card.tsx, cancel-booking-dialog.tsx
 hooks/
-  use-account.ts       # all state + handlers for the Auth/Profile/Address flow
-  account-context.tsx   # React context wrapping useAccount() for use across routes
+  use-account.ts        # all state + handlers for the Auth/Profile/Address flow
+  account-context.tsx    # React context wrapping useAccount() for use across routes
+  booking-draft-context.tsx  # client-side browse-to-book selection state
 lib/
   api-client.ts        # see "API calls" below
-  types.ts             # User / Address / AddressFormValues
-  utils.ts             # shadcn's cn() helper
+  types.ts             # User / Address / AddressFormValues / Booking / BookingDetail / availability & coupon types
+  utils.ts             # shadcn's cn() helper, date/time formatting
 docs/
   designs/                              # mobile design screenshots, numbered 01-12 + light_mode_all_pages
   PROPOSED_PUBLIC_BROWSE_CONTRACT.md    # drafted, not yet implemented — see above
@@ -53,7 +70,9 @@ docs/
 
 ## Scope: what's actually built vs. what the designs show
 
-Backend is far along now (see `../salonjaa-backend/docs/PROGRESS.md`): Auth, User+Address, Salon+Branch, Staff+Services, Availability+Booking, Payment+Coupon, Reviews are all 🟢 Live; Admin is partial. Despite that, four design screens (Home `02`, Nearby Salons `04`, Salon Details `03`, Select Services `05`) have **nothing to call** — every salon/branch/service read is Salon-Owner-scoped, not public. Those stay placeholders (`components/coming-soon.tsx`) until `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md` is implemented. Choose Stylist (`06`), Choose Slot (`07`), Checkout (`08`), Payment (`09`), Booking Confirmed (`10`), and My Bookings (`12`) all have live endpoints already (`/availability/*`, `/bookings`, `/payments/*`) and don't need that contract — build those next.
+Backend is far along now (see `../salonjaa-backend/docs/PROGRESS.md`): Auth, User+Address, Salon+Branch, Staff+Services, Availability+Booking, Payment+Coupon, Reviews are all 🟢 Live; Admin is partial. Despite that, four design screens (Home `02`, Nearby Salons `04`, Salon Details `03`, Select Services `05`) have **nothing to call** — every salon/branch/service read is Salon-Owner-scoped, not public. Those stay placeholders (`components/coming-soon.tsx`) until `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md` is implemented.
+
+Choose Stylist (`06`), Choose Slot (`07`), Checkout (`08`), and My Bookings (`12`) are built (Modules 4/5/7) against live endpoints and don't need that contract. Payment (`09`) and the real Booking Confirmed (`10`) are Module 6, not yet built — `app/bookings/[bookingId]/pay` is currently a placeholder reachable from an `APPROVED` booking's "Pay Now" button.
 
 The Profile menu's disabled rows (My Wallet, Payment Methods, Refer & Earn, Help & Support, Settings) and the Offers tab stay disabled/placeholder for the same reason: **don't wire disabled or placeholder screens to fake data or invented endpoints.** Build them out only once their backend module ships and `frontend_handover.md` documents the contract.
 

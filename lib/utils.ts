@@ -22,3 +22,12 @@ export function formatTime12h(time: string) {
   const hour12 = h % 12 || 12;
   return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
 }
+
+// Full ISO datetime (e.g. a booking's scheduledStart, which the backend
+// sends in UTC) -> "Tue, 21 May 2026 • 2:00 PM" in the viewer's local time.
+export function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  const dateLabel = d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  const timeLabel = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${dateLabel} • ${timeLabel}`;
+}

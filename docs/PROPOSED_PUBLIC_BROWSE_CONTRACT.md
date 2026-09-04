@@ -96,6 +96,26 @@ and the Hair/Skin/Spa/Makeup/Nails filter row (Select Services, 05).
   endpoint. Same "Coming soon" treatment as the other nav rows already disabled in
   `profile-menu.tsx`.
 
+## Also proposed: booking responses have no salon/branch/staff *names*
+
+Found while building Module 7 (My Bookings). `GET /bookings/my-bookings` and
+`GET /bookings/:id` are correctly Customer-owned-data endpoints (no auth gap
+here) — but their response only carries `salonId`, `branchId`, and
+`selectedStaffId` as raw UUIDs, never a resolved name. Since salon/branch/staff
+detail lookups are all Salon-Owner-scoped (the same gap as above), a customer
+looking at their own booking history has no way to show which salon it's
+at or who the stylist is — docs/designs/12-user-bookings.jpeg's salon name,
+photo, and professional name can't be rendered from real data today.
+
+This isn't a "make it public" fix like the browse contract above — it's the
+booking's own module returning data its own customer is already authorized
+to see. Simplest fix: embed a denormalized `salonName`, `branchName`, `city`,
+and (when `selectedStaffId` is set) `staffName` directly into both the list
+and detail responses, resolved server-side at query time. Until this ships,
+`components/booking-card.tsx` shows the booking's own human-readable
+`bookingNumber` as the card's title instead of a salon name/photo, and omits
+the professional's name entirely rather than showing a raw UUID.
+
 ## Auth model this assumes
 
 Browsing (Home → Explore → Salon Details → Select Services → Choose Stylist →

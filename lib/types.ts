@@ -75,3 +75,51 @@ export type BookingCreateResult = {
   bookingId: string;
   status: string;
 };
+
+// Real shape observed from a live GET /bookings/my-bookings call (frontend_handover.md
+// doesn't specify the row contract beyond "not supplied") — no salon/branch/staff
+// *name* fields exist here, only their IDs. Those endpoints are all Salon-Owner-scoped
+// (see docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md), so a customer's own booking list has
+// no way to resolve them to a display name today — see app/(tabs)/bookings/page.tsx's
+// note on how that's handled without fabricating anything.
+export type BookingStatus = "PENDING" | "APPROVED" | "CANCELLED" | "COMPLETED" | "EXPIRED";
+
+export type Booking = {
+  id: string;
+  bookingNumber: string;
+  customerId: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  salonId: string;
+  branchId: string;
+  bookingType: string;
+  bookingStatus: BookingStatus;
+  selectedStaffId: string | null;
+  scheduledStart: string;
+  scheduledEnd: string;
+  totalDurationMinutes: number;
+  subtotalAmount: number;
+  discountAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  notes: string | null;
+  rejectionReason: string | null;
+  cancellationReason: string | null;
+  approvedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  expiredAt: string | null;
+  createdAt: string;
+};
+
+// GET /bookings/:id embeds this — the list endpoint above does not.
+export type BookingServiceLine = {
+  serviceId: string;
+  serviceName: string;
+  durationMinutes: number;
+  price: number;
+  quantity: number;
+  totalAmount: number;
+};
+
+export type BookingDetail = Booking & { services: BookingServiceLine[] };
