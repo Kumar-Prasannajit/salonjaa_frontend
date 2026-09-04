@@ -3,6 +3,7 @@ import { DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AccountProvider } from "@/hooks/account-context";
+import { BookingDraftProvider } from "@/hooks/booking-draft-context";
 
 // Self-hosted via next/font instead of the old @import url(fonts.googleapis.com...)
 // in globals.css. Playfair Display was dropped: the real designs (docs/designs/)
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${dmSans.variable} ${dmMono.variable}`} suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <AccountProvider>{children}</AccountProvider>
+          <AccountProvider>
+            <BookingDraftProvider>{children}</BookingDraftProvider>
+          </AccountProvider>
         </ThemeProvider>
       </body>
     </html>

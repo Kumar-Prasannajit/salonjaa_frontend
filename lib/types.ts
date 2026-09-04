@@ -44,3 +44,20 @@ export const blankAddressForm: AddressFormValues = {
   longitude: "",
   isDefault: false,
 };
+
+// GET /availability/staff response row — see docs/designs/06-choose-stylist.jpeg.
+// No photo/rating/experience fields exist on this contract; don't fabricate them.
+export type AvailableStaff = {
+  staffId: string;
+  name: string;
+  type: string;
+};
+
+// GET /availability/slots response row — see docs/designs/07-choose-slot.jpeg.
+// slotId is a plain "HH:MM-HH:MM" string per the backend, not a persisted ID.
+export type AvailableSlot = {
+  slotId: string;
+  startTime: string;
+  endTime: string;
+  available: boolean;
+};
