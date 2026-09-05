@@ -48,9 +48,14 @@ export const blankAddressForm: AddressFormValues = {
 // GET /public/branches response row (Module 10) — Home's "Popular Near You"
 // and Explore/Nearby Salons. Bare array, no envelope, per frontend_handover.md.
 // No `area` field exists on branches — only addressLine1/city — so that's the
-// secondary location line. `distanceKm` is only present when the request sent
-// lat+lng (real device geolocation, see hooks/use-geolocation.ts — there's no
-// geocoding endpoint to turn it into a place name).
+// secondary location line. `distanceKm` is `null` (not omitted) when the
+// request didn't send lat+lng (real device geolocation, see
+// hooks/use-geolocation.ts — there's no geocoding endpoint to turn it into a
+// place name) — checked directly against the backend's own
+// public-branch.types.ts, not just the doc's example payload. `averageRating`
+// is likewise `null` for a branch with zero reviews, not `0` — don't call
+// `.toFixed()` on either without a null check first (components/salon-card.tsx
+// is the one place that does).
 export type PublicBranchSummary = {
   branchId: string;
   salonId: string;
@@ -59,8 +64,8 @@ export type PublicBranchSummary = {
   city: string;
   addressLine1: string;
   coverImage: string | null;
-  distanceKm?: number;
-  averageRating: number;
+  distanceKm: number | null;
+  averageRating: number | null;
   reviewCount: number;
 };
 
@@ -81,10 +86,10 @@ export type PublicService = {
 // (salon_gallery_images doesn't exist yet, per the backend note) — present
 // only so this doesn't need a breaking shape change once that ships.
 export type PublicBranchDetail = PublicBranchSummary & {
-  description: string;
+  description: string | null;
   gallery: string[];
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   verificationStatus: string;
   openingTime: string;
   closingTime: string;

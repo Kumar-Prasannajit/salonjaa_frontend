@@ -25,6 +25,10 @@ function CoverImage({ branch, className }: { branch: PublicBranchSummary; classN
 }
 
 function RatingLine({ branch }: { branch: PublicBranchSummary }) {
+  // averageRating is null (not 0) for a branch with zero reviews — GET
+  // /public/branches's own repository only ever aggregates over rows that
+  // exist, per public-branch.repository.ts's getRatingAggregates().
+  if (branch.averageRating === null) return <p className="text-sm text-muted-foreground">No reviews yet</p>;
   return (
     <p className="flex items-center gap-1 text-sm">
       <Star className="size-3.5 fill-primary text-primary" />
@@ -52,7 +56,7 @@ export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; va
           <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
             <MapPin className="size-3 shrink-0" />
             {branch.city}
-            {branch.distanceKm !== undefined && `, ${branch.distanceKm.toFixed(1)} km`}
+            {branch.distanceKm != null && `, ${branch.distanceKm.toFixed(1)} km`}
           </p>
           <RatingLine branch={branch} />
         </div>
@@ -70,7 +74,7 @@ export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; va
         <p className="truncate font-semibold">{title}</p>
         <p className="truncate text-xs text-muted-foreground">
           {branch.addressLine1 || branch.city}
-          {branch.distanceKm !== undefined && `, ${branch.distanceKm.toFixed(1)} km`}
+          {branch.distanceKm != null && `, ${branch.distanceKm.toFixed(1)} km`}
         </p>
         <RatingLine branch={branch} />
       </div>

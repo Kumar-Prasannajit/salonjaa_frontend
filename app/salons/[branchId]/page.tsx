@@ -101,16 +101,22 @@ export default function SalonDetailsPage() {
             <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="size-3.5 shrink-0" />
               {branch.addressLine1}, {branch.city}
-              {branch.distanceKm !== undefined && ` • ${branch.distanceKm.toFixed(1)} km`}
+              {branch.distanceKm != null && ` • ${branch.distanceKm.toFixed(1)} km`}
             </p>
             <button
               type="button"
               onClick={() => router.push(`/reviews/salon/${branch.salonId}`)}
               className="mt-2 flex items-center gap-1 text-sm"
             >
-              <Star className="size-4 fill-primary text-primary" />
-              <span className="font-medium">{branch.averageRating.toFixed(1)}</span>
-              <span className="text-muted-foreground underline underline-offset-2">({branch.reviewCount} Reviews)</span>
+              {branch.averageRating !== null ? (
+                <>
+                  <Star className="size-4 fill-primary text-primary" />
+                  <span className="font-medium">{branch.averageRating.toFixed(1)}</span>
+                  <span className="text-muted-foreground underline underline-offset-2">({branch.reviewCount} Reviews)</span>
+                </>
+              ) : (
+                <span className="text-muted-foreground underline underline-offset-2">No reviews yet</span>
+              )}
             </button>
 
             {branch.description && (
