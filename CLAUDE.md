@@ -17,7 +17,8 @@ Customer-facing web app for the Salonjaa salon discovery/booking platform. Next.
 - **Real routing (App Router), introduced once the flow grew past a single screen.** The `(tabs)` route group (`app/(tabs)/layout.tsx`) renders the shared header + `BottomNav` around the 5 bottom-nav destinations (`/`, `/bookings`, `/explore`, `/offers`, `/profile`); everything else (booking-flow drill-ins, `/profile/addresses`) lives outside that group with no tab bar, matching how those screens are drawn in the designs (full-screen with a back arrow, not a persistent tab bar).
 - **Browsing is anonymous; auth is deferred to checkout.** A customer can browse Home → Explore → Salon Details → Select Services → Choose Stylist → Choose Slot without signing in. `AuthScreen` no longer gates the whole app — it renders inline on `/profile` when signed out, and a compact variant (`components/checkout-auth-step.tsx`) renders again at Checkout, right before `POST /bookings`. If `GET /users/me` comes back with no `name`, `components/checkout-basic-details-step.tsx` collects it (`PATCH /users/me`) as one extra step first.
 - **`useAccount()` is hoisted into a context** (`hooks/account-context.tsx`, `AccountProvider`/`useAccountContext`) at the root layout, not called once inside a single page component — necessary since Profile, Saved Addresses, Checkout, and My Bookings are all separate routes that need the same session state without prop-drilling.
-- **`useBookingDraft()` context** (`hooks/booking-draft-context.tsx`) holds the in-progress browse-to-book selection (branch/salon, services, stylist, slot) across `/book/[branchId]/*` routes — nothing here persists server-side until Checkout's `POST /bookings` actually creates the booking. Lost on reload, same tradeoff as the auth tokens.
+- **`useBookingDraft()` context** (`hooks/booking-draft-context.tsx`) holds the in-progress browse-to-book selection (branch/salon, services, stylist, slot), set by `app/salons/[branchId]/services/page.tsx` (Select Services) and carried across `/book/[branchId]/*` routes — nothing here persists server-side until Checkout's `POST /bookings` actually creates the booking. Lost on reload, same tradeoff as the auth tokens.
+- **Public Browse (Home/Explore/Salon Details/Select Services) never fabricates a location name or a discount.** `GET /public/branches`'s `distanceKm` only appears once real coordinates are sent, sourced from the browser's own Geolocation API (`hooks/use-geolocation.ts`) behind an explicit "Use my location" action — there's no geocoding endpoint to turn that into "Banjara Hills"-style text, so no screen tries to. Discount badges and the heart/favourite icon the designs show are omitted outright (not rendered inert) — `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md` explicitly dropped both from MVP, no column/table backs either.
 - **A customer cannot pay immediately after booking.** `POST /payments/create-order` requires the booking to already be `APPROVED` by the salon (PROGRESS.md's Module 7 note: "if salon owner approves then customer will pay"). So Checkout's CTA is "Confirm Booking Request", not "Proceed to Payment" as the design literally shows — real payment is a separate later action (`components/booking-card.tsx`'s "Pay Now", shown only on `APPROVED` bookings in My Bookings). Don't reintroduce an immediate pay-at-checkout flow without a corresponding backend change.
 - **Coupon validation is informational only.** `POST /payments/coupons/validate` is real and live, but no endpoint anywhere attaches a coupon to a booking — Checkout shows the validated discount with a disclaimer rather than deducting it from the total, since deducting it would misrepresent what payment will actually charge later.
 - **Bookings have no resolved salon/branch/staff names** (see `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md`'s second section) — `components/booking-card.tsx` uses the booking's own `bookingNumber` as its title instead of a salon name/photo, and omits the professional's name entirely rather than showing a raw UUID.
@@ -34,15 +35,17 @@ app/
   layout.tsx, globals.css        # root: fonts, ThemeProvider, AccountProvider, BookingDraftProvider
   (tabs)/
     layout.tsx                    # shared header + BottomNav
-    page.tsx                      # "/"        Home            — placeholder, blocked on browse contract
-    explore/page.tsx              # "/explore" Explore/search  — placeholder, blocked on browse contract; dev-only link to /book/start
+    page.tsx                      # "/"        Home            — docs/designs/02, GET /public/branches + GET /service-categories
+    explore/page.tsx              # "/explore" Explore/search  — docs/designs/04, GET /public/branches, reads q/serviceCategoryId from the URL
     bookings/page.tsx             # "/bookings" My Bookings    — tabs (Upcoming/Completed/Cancelled), cancel action
     offers/page.tsx               # "/offers"  Offers          — placeholder, no contract at all
     profile/page.tsx              # "/profile" AuthScreen (signed out) or ProfileMenu (signed in)
   profile/
     addresses/page.tsx            # "/profile/addresses" — no tab bar; redirects to /profile if signed out
+  salons/[branchId]/
+    page.tsx                       # docs/designs/03 — GET /public/branches/:branchId
+    services/page.tsx              # docs/designs/05 — same endpoint's embedded services[]; Next hands off into useBookingDraft().setServices(), the real entry into Modules 4-7
   book/
-    start/page.tsx                 # DEV-ONLY, temporary — manual branchId/salonId/services entry, stands in for Module 3
     [branchId]/
       stylist/page.tsx              # docs/designs/06 — GET /availability/staff
       slot/page.tsx                 # docs/designs/07 — SlotPicker + GET /availability/slots
@@ -59,14 +62,16 @@ components/
   auth-screen.tsx, profile-menu.tsx, address-list.tsx, address-form-dialog.tsx,
   theme-provider.tsx, theme-toggle.tsx, bottom-nav.tsx, coming-soon.tsx,
   slot-picker.tsx, checkout-auth-step.tsx, checkout-basic-details-step.tsx,
-  booking-card.tsx, cancel-booking-dialog.tsx, star-rating.tsx, report-review-dialog.tsx
+  booking-card.tsx, cancel-booking-dialog.tsx, star-rating.tsx, report-review-dialog.tsx,
+  salon-card.tsx      # one GET /public/branches row, `variant: "grid" | "row"` — Home's horizontal scroll vs. Explore's list
 hooks/
   use-account.ts        # all state + handlers for the Auth/Profile/Address flow
   account-context.tsx    # React context wrapping useAccount() for use across routes
   booking-draft-context.tsx  # client-side browse-to-book selection state
+  use-geolocation.ts     # thin wrapper around navigator.geolocation — real device coords for GET /public/branches's distance sort, never auto-requested
 lib/
   api-client.ts        # see "API calls" below
-  types.ts             # User / Address / AddressFormValues / Booking / BookingDetail / Payment / Review / availability & coupon types
+  types.ts             # User / Address / AddressFormValues / Booking / BookingDetail / Payment / Review / availability & coupon / public-browse types
   utils.ts             # shadcn's cn() helper, date/time formatting, downloadBookingICS
   razorpay.ts          # Standard Checkout widget loader + open() wrapper
 docs/
@@ -81,9 +86,9 @@ docs/
 
 ## Scope: what's actually built vs. what the designs show
 
-Backend is far along now (see `../salonjaa-backend/docs/PROGRESS.md`): Auth, User+Address, Salon+Branch, Staff+Services, Availability+Booking, Payment+Coupon, Reviews are all 🟢 Live; Admin is partial. Despite that, four design screens (Home `02`, Nearby Salons `04`, Salon Details `03`, Select Services `05`) have **nothing to call** — every salon/branch/service read is Salon-Owner-scoped, not public. Those stay placeholders (`components/coming-soon.tsx`) until `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md` is implemented.
+Backend is far along now (see `../salonjaa-backend/docs/PROGRESS.md`): Auth, User+Address, Salon+Branch, Staff+Services, Public Browse, Availability+Booking, Payment+Coupon, Reviews are all 🟢 Live; Admin is partial. Public Browse (Module 10 — `GET /public/branches`, `GET /public/branches/:branchId`, `GET /service-categories`) shipped after `docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md` was drafted here, so Home (`02`), Nearby Salons (`04`), Salon Details (`03`), and Select Services (`05`) are all built against it now — no more `ComingSoon` placeholders. Two things the contract explicitly dropped (no source of truth on the backend for either) stay out of these screens rather than being faked: the designs' "20% OFF" discount badges and heart/favourite icons. There's also still no geocoding endpoint, so nowhere shows a typed place name ("Banjara Hills") — distance sort uses real browser Geolocation coordinates instead (`hooks/use-geolocation.ts`), never auto-requested.
 
-Choose Stylist (`06`), Choose Slot (`07`), Checkout (`08`), Payment (`09`), Booking Confirmed (`10`), My Bookings (`12`), and Reviews (not in the numbered designs — Module 8) are all built against live endpoints and don't need that contract.
+Choose Stylist (`06`), Choose Slot (`07`), Checkout (`08`), Payment (`09`), Booking Confirmed (`10`), My Bookings (`12`), and Reviews (not in the numbered designs — Module 8) were already built against live endpoints and needed no changes here.
 
 The Profile menu's disabled rows (My Wallet, Payment Methods, Refer & Earn, Help & Support, Settings) and the Offers tab stay disabled/placeholder for the same reason: **don't wire disabled or placeholder screens to fake data or invented endpoints.** Build them out only once their backend module ships and `frontend_handover.md` documents the contract.
 

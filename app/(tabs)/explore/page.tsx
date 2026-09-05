@@ -1,23 +1,140 @@
-import Link from "next/link";
-import { Search } from "lucide-react";
-import { ComingSoon } from "@/components/coming-soon";
+"use client";
 
-// Nearby Salons search/filter (docs/designs/04-nearby-salons-based-on-service.jpeg).
-// Same blocker as Home — see docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md. Module 2/3.
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Search, SearchX } from "lucide-react";
+import { apiFetch, messageFromError } from "@/lib/api-client";
+import type { PublicBranchSummary } from "@/lib/types";
+import { useGeolocation } from "@/hooks/use-geolocation";
+import { SalonCard } from "@/components/salon-card";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// docs/designs/04-nearby-salons-based-on-service.jpeg, against the real
+// GET /public/branches (Module 10). No "Change Location" footer — same
+// reasoning as Home, there's no geocoding to produce a place name from
+// coordinates. `q`/`serviceCategoryId` seed from the URL so Home's search box
+// and category chips land here pre-filled/pre-filtered.
+const SORTS = [
+  { key: "popular", label: "Popular" },
+  { key: "rating", label: "Rating" },
+  { key: "distance", label: "Distance" },
+] as const;
+type SortKey = (typeof SORTS)[number]["key"];
+
+function ExploreContent() {
+  const searchParams = useSearchParams();
+  const geo = useGeolocation();
+
+  const [query, setQuery] = useState(searchParams.get("q") || "");
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [sort, setSort] = useState<SortKey>("popular");
+  const serviceCategoryId = searchParams.get("serviceCategoryId") || undefined;
+
+  const [branches, setBranches] = useState<PublicBranchSummary[] | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 400);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    if (sort === "distance" && geo.status === "idle") geo.request();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setError("");
+    const effectiveSort = sort === "distance" && !geo.coords ? "popular" : sort;
+    const params = new URLSearchParams({ sort: effectiveSort });
+    if (debouncedQuery.trim()) params.set("q", debouncedQuery.trim());
+    if (serviceCategoryId) params.set("serviceCategoryId", serviceCategoryId);
+    if (effectiveSort === "distance" && geo.coords) {
+      params.set("lat", String(geo.coords.lat));
+      params.set("lng", String(geo.coords.lng));
+    }
+    apiFetch<PublicBranchSummary[]>(`/public/branches?${params}`, {}, { auth: false })
+      .then((list) => !cancelled && setBranches(list))
+      .catch((e) => !cancelled && setError(messageFromError(e)));
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery, serviceCategoryId, sort, geo.coords]);
+
+  return (
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+      <h1 className="text-lg font-semibold md:text-2xl">Nearby Salons</h1>
+
+      <div className="relative mt-4">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search for salons, services…" className="h-11 rounded-xl pl-9" />
+      </div>
+
+      <div className="mt-3 flex gap-2">
+        {SORTS.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            onClick={() => setSort(s.key)}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              sort === s.key ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border text-muted-foreground"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {sort === "distance" && geo.status === "denied" && (
+        <p className="mt-2 text-xs text-muted-foreground">Location access denied — showing popular salons instead.</p>
+      )}
+
+      <div className="mt-6 space-y-3">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {!error && branches === null && (
+          <>
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </>
+        )}
+
+        {branches !== null && (
+          <p className="text-sm text-primary">
+            {branches.length}
+            {branches.length >= 20 ? "+" : ""} salon{branches.length === 1 ? "" : "s"} found
+          </p>
+        )}
+
+        {branches !== null && branches.length === 0 && (
+          <Card className="flex flex-col items-center gap-3 border-dashed p-10 text-center">
+            <SearchX className="size-8 text-accent" />
+            <p className="font-semibold">No salons found</p>
+            <p className="text-sm text-muted-foreground">Try a different search or clear your filters.</p>
+          </Card>
+        )}
+
+        {branches?.map((b) => (
+          <SalonCard key={b.branchId} branch={b} variant="row" />
+        ))}
+      </div>
+    </main>
+  );
+}
+
 export default function ExplorePage() {
   return (
-    <div className="flex flex-col items-center">
-      <ComingSoon
-        icon={Search}
-        title="Explore salons & services"
-        description="Search and filters land once the salon browse API is live. Nothing to query against yet."
-      />
-      {/* Dev-only, temporary — see app/book/start/page.tsx. Not a real nav
-          entry, just the only way to reach Modules 4-7 while this tab is
-          still blocked. Remove this link once Module 3 ships. */}
-      <Link href="/book/start" className="-mt-8 pb-8 text-xs text-muted-foreground underline underline-offset-2">
-        Dev: start a test booking →
-      </Link>
-    </div>
+    <Suspense>
+      <ExploreContent />
+    </Suspense>
   );
 }

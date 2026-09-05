@@ -45,6 +45,63 @@ export const blankAddressForm: AddressFormValues = {
   isDefault: false,
 };
 
+// GET /public/branches response row (Module 10) — Home's "Popular Near You"
+// and Explore/Nearby Salons. Bare array, no envelope, per frontend_handover.md.
+// No `area` field exists on branches — only addressLine1/city — so that's the
+// secondary location line. `distanceKm` is only present when the request sent
+// lat+lng (real device geolocation, see hooks/use-geolocation.ts — there's no
+// geocoding endpoint to turn it into a place name).
+export type PublicBranchSummary = {
+  branchId: string;
+  salonId: string;
+  salonName: string;
+  branchName: string;
+  city: string;
+  addressLine1: string;
+  coverImage: string | null;
+  distanceKm?: number;
+  averageRating: number;
+  reviewCount: number;
+};
+
+// GET /public/branches/:branchId embedded service row — no `status` field,
+// the backend only ever returns bookable (ACTIVE) services here.
+export type PublicService = {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  name: string;
+  durationMinutes: number;
+  basePrice: number;
+  imageUrl: string | null;
+};
+
+// GET /public/branches/:branchId response (Module 10) — Salon Details +
+// Select Services. Bare object, no envelope. `gallery` is always `[]` today
+// (salon_gallery_images doesn't exist yet, per the backend note) — present
+// only so this doesn't need a breaking shape change once that ships.
+export type PublicBranchDetail = PublicBranchSummary & {
+  description: string;
+  gallery: string[];
+  latitude: number;
+  longitude: number;
+  verificationStatus: string;
+  openingTime: string;
+  closingTime: string;
+  services: PublicService[];
+};
+
+// GET /service-categories response row (Module 10) — "Top Services" chips
+// (Home). frontend_handover.md claims `icon` is always null, but the live
+// seed data actually returns short semantic strings (e.g. "scissors", "spa")
+// — app/(tabs)/page.tsx maps these to Lucide icons with a fallback
+// for anything unrecognized, so still typed nullable in case that changes.
+export type ServiceCategory = {
+  id: string;
+  name: string;
+  icon: string | null;
+};
+
 // GET /availability/staff response row — see docs/designs/06-choose-stylist.jpeg.
 // No photo/rating/experience fields exist on this contract; don't fabricate them.
 export type AvailableStaff = {
