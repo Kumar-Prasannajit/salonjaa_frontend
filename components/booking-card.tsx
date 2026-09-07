@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // title only in the unlikely case salonName comes back null.
 const STATUS_STYLE: Record<Booking["bookingStatus"], { label: string; className: string }> = {
   PENDING: { label: "Pending Approval", className: "text-primary" },
+  AWAITING_PAYMENT: { label: "Payment Due", className: "text-primary" },
   APPROVED: { label: "Confirmed", className: "text-success" },
   COMPLETED: { label: "Completed", className: "text-success" },
   CANCELLED: { label: "Cancelled", className: "text-destructive" },
@@ -31,16 +32,21 @@ export function BookingCard({
 }: {
   booking: Booking;
   detail?: BookingDetail;
-  // bookingStatus never changes on a successful payment (no AWAITING_PAYMENT
-  // state exists), so this comes from a separate GET /payments/my-payments
-  // lookup — see app/(tabs)/bookings/page.tsx's loadBookings().
+  // Module 14b: AWAITING_PAYMENT → APPROVED now happens on successful
+  // payment, so bookingStatus alone is enough to drive the Pay Now button.
+  // This separate GET /payments/my-payments cross-check (see
+  // app/(tabs)/bookings/page.tsx's loadBookings()) is kept only for the
+  // "Paid" badge on an already-APPROVED ONLINE booking — a PAY_AT_SALON
+  // booking reaches APPROVED too, but never has a payment row, so `paid`
+  // correctly stays false for it and no badge shows.
   paid: boolean;
   onCancel: (booking: Booking) => void;
   cancelling: boolean;
 }) {
   const router = useRouter();
   const status = STATUS_STYLE[booking.bookingStatus];
-  const isUpcoming = booking.bookingStatus === "PENDING" || booking.bookingStatus === "APPROVED";
+  const isUpcoming =
+    booking.bookingStatus === "PENDING" || booking.bookingStatus === "AWAITING_PAYMENT" || booking.bookingStatus === "APPROVED";
 
   return (
     <Card className="p-4">
@@ -92,23 +98,31 @@ export function BookingCard({
         </div>
       )}
 
+      {booking.bookingStatus === "AWAITING_PAYMENT" && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {/* BOOKING_PAYMENT_WINDOW_MINUTES's current server default (15) — no endpoint returns this
+              number, so this is a best-effort figure, not a live countdown against the real deadline. */}
+          Pay within 15 minutes or this booking will be automatically cancelled.
+        </p>
+      )}
+
       {isUpcoming && (
         <div className="mt-4 flex gap-2">
-          {booking.bookingStatus === "APPROVED" &&
-            (paid ? (
-              <span className="flex flex-1 items-center justify-center gap-1.5 text-sm font-medium text-success">
-                <CheckCircle2 className="size-4" />
-                Paid
-              </span>
-            ) : (
-              <Button
-                size="sm"
-                className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
-                onClick={() => router.push(`/bookings/${booking.id}/pay`)}
-              >
-                Pay Now
-              </Button>
-            ))}
+          {booking.bookingStatus === "AWAITING_PAYMENT" && (
+            <Button
+              size="sm"
+              className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+              onClick={() => router.push(`/bookings/${booking.id}/pay`)}
+            >
+              Pay Now
+            </Button>
+          )}
+          {booking.bookingStatus === "APPROVED" && paid && (
+            <span className="flex flex-1 items-center justify-center gap-1.5 text-sm font-medium text-success">
+              <CheckCircle2 className="size-4" />
+              Paid
+            </span>
+          )}
           <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/bookings/${booking.id}/reschedule`)}>
             Reschedule
           </Button>

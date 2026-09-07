@@ -144,7 +144,12 @@ export type BookingCreateResult = {
 // (see docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md), so a customer's own booking list has
 // no way to resolve them to a display name today — see app/(tabs)/bookings/page.tsx's
 // note on how that's handled without fabricating anything.
-export type BookingStatus = "PENDING" | "APPROVED" | "CANCELLED" | "COMPLETED" | "EXPIRED";
+// Module 14b — AWAITING_PAYMENT added: an ONLINE-payment booking now sits
+// here (not APPROVED) once the salon approves it and its
+// BOOKING_PAYMENT_WINDOW_MINUTES-minute payment window is running; a
+// PAY_AT_SALON booking never passes through this state (approve goes
+// straight to APPROVED, unchanged). See docs/KNOWN_BACKEND_LIMITATIONS.md.
+export type BookingStatus = "PENDING" | "AWAITING_PAYMENT" | "APPROVED" | "CANCELLED" | "COMPLETED" | "EXPIRED";
 
 export type Booking = {
   id: string;
@@ -156,6 +161,9 @@ export type Booking = {
   branchId: string;
   bookingType: string;
   bookingStatus: BookingStatus;
+  // Module 14b — set at POST /bookings creation time (ONLINE default),
+  // snapshotted onto the booking; walk-ins always get PAY_AT_SALON.
+  paymentMethod: "ONLINE" | "PAY_AT_SALON";
   selectedStaffId: string | null;
   scheduledStart: string;
   scheduledEnd: string;

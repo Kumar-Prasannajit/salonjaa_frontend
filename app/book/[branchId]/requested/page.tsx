@@ -21,6 +21,7 @@ export default function BookingRequestedPage() {
 
   const bookingId = searchParams.get("bookingId");
   const status = searchParams.get("status");
+  const paymentMethod = searchParams.get("paymentMethod");
 
   // Guard against landing here directly with no booking result — this page
   // only makes sense right after checkout/page.tsx's confirmBooking() redirect.
@@ -38,7 +39,9 @@ export default function BookingRequestedPage() {
         </div>
         <h1 className="mt-4 text-2xl font-bold text-primary">Booking Requested!</h1>
         <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-          The salon will review your request and confirm shortly. You&apos;ll be notified, and can then pay from My Bookings.
+          {paymentMethod === "PAY_AT_SALON"
+            ? "The salon will review your request and confirm shortly. You'll pay at the salon — no online payment needed."
+            : "The salon will review your request and confirm shortly. You'll be notified, and can then pay from My Bookings."}
         </p>
       </div>
 

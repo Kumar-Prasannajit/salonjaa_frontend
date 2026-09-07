@@ -14,19 +14,24 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-// docs/designs/08-checkout-page.jpeg, with two real deviations from the
-// literal design, both forced by how the backend actually works (per
-// PROGRESS.md's Module 7 notes) rather than a frontend choice:
+// docs/designs/08-checkout-page.jpeg, with three real deviations from the
+// literal design, all forced by how the backend actually works rather than a
+// frontend choice:
 //
 // 1. The design's CTA reads "Proceed to Payment", but POST /payments/create-order
-//    requires the booking to already be APPROVED by the salon first — a
+//    requires the booking to already be AWAITING_PAYMENT (Module 14b — an
+//    online booking only reaches that once the salon approves it) — a
 //    customer cannot pay at this point in the flow. This button creates the
 //    PENDING booking and requests approval; actual payment happens later,
-//    from My Bookings (Module 7), once the salon approves. Labeled
-//    accordingly rather than promising something that can't happen yet.
+//    from My Bookings, once the salon approves. Labeled accordingly rather
+//    than promising something that can't happen yet.
 // 2. The design shows a flat "Taxes & Fees" line — no tax/fee schedule exists
 //    anywhere in the API, so nothing here is fabricated to fill that row; it's
 //    omitted entirely.
+// 3. A payment-method choice (Module 14b, no design mockup exists for it)
+//    lets the customer pick PAY_AT_SALON instead of the ONLINE default — that
+//    booking skips the AWAITING_PAYMENT/online-payment step entirely and
+//    goes straight to APPROVED once the salon approves it.
 //
 // The coupon-validate call is real and live, but its result is *informational
 // only*: no documented endpoint anywhere attaches a coupon to a booking (POST
@@ -41,6 +46,8 @@ export default function CheckoutPage() {
   const { draft } = useBookingDraft();
   const account = useAccountContext();
   const { isAuthenticated, user } = account;
+
+  const [paymentMethod, setPaymentMethod] = useState<"ONLINE" | "PAY_AT_SALON">("ONLINE");
 
   const [couponCode, setCouponCode] = useState("");
   const [couponResult, setCouponResult] = useState<CouponValidation | null>(null);
@@ -90,11 +97,12 @@ export default function CheckoutPage() {
         services: draft.services.map((s) => s.id),
         bookingDate: draft.date,
         slotId: draft.slotId,
+        paymentMethod,
       };
       if (draft.staffId) body.staffId = draft.staffId;
 
       const result = await apiFetch<BookingCreateResult>("/bookings", { method: "POST", body: JSON.stringify(body) });
-      router.push(`/book/${branchId}/requested?bookingId=${result.bookingId}&status=${result.status}`);
+      router.push(`/book/${branchId}/requested?bookingId=${result.bookingId}&status=${result.status}&paymentMethod=${paymentMethod}`);
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         setBookingError("That slot was just taken. Please go back and pick another time.");
@@ -174,6 +182,30 @@ export default function CheckoutPage() {
             </Card>
 
             <Card className="p-4">
+              <p className="text-sm font-medium">Payment Method</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("ONLINE")}
+                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                    paymentMethod === "ONLINE" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                  }`}
+                >
+                  Pay Online
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod("PAY_AT_SALON")}
+                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                    paymentMethod === "PAY_AT_SALON" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                  }`}
+                >
+                  Pay at Salon
+                </button>
+              </div>
+            </Card>
+
+            <Card className="p-4">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <BadgePercent className="size-4 text-primary" />
                 Have a coupon?
@@ -218,7 +250,9 @@ export default function CheckoutPage() {
               {bookingBusy ? "Sending request…" : "Confirm Booking Request"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              This reserves your slot and sends the salon your request — you&apos;ll pay once they approve it.
+              {paymentMethod === "ONLINE"
+                ? "This reserves your slot and sends the salon your request — once approved, you'll have a short window to pay online."
+                : "This reserves your slot and sends the salon your request — you'll pay at the salon once approved."}
             </p>
           </>
         )}

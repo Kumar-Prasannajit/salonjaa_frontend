@@ -19,8 +19,11 @@ const METHODS = [
 ] as const;
 
 // docs/designs/09-payment-mode.jpeg. POST /payments/create-order requires
-// the booking to already be APPROVED (see checkout/page.tsx's note); this
-// page is the "Pay Now" destination from an APPROVED booking in My Bookings.
+// the booking to be AWAITING_PAYMENT (Module 14b — was APPROVED before that
+// shipped); this page is the "Pay Now" destination from an AWAITING_PAYMENT
+// booking in My Bookings. A PAY_AT_SALON booking never reaches this state at
+// all (approve goes straight to APPROVED), so it never lands here with
+// anything to pay.
 // Razorpay's Standard Checkout widget provides its own payment-method UI
 // once opened — the method cards below aren't a substitute for that, they
 // set `prefill.method` so the widget opens on the tab the customer already
@@ -118,14 +121,18 @@ export default function PayBookingPage() {
         </div>
       )}
 
-      {booking && booking.bookingStatus !== "APPROVED" && (
+      {booking && booking.bookingStatus !== "AWAITING_PAYMENT" && (
         <Card className="mt-6 flex flex-col items-center gap-3 border-dashed p-10 text-center">
           <Lock className="size-8 text-accent" />
           <p className="font-semibold">Not ready for payment yet</p>
           <p className="text-sm text-muted-foreground">
             {booking.bookingStatus === "PENDING"
               ? "The salon hasn't approved this booking yet."
-              : `This booking is ${booking.bookingStatus.toLowerCase()} and can't be paid for.`}
+              : booking.paymentMethod === "PAY_AT_SALON"
+              ? "This booking doesn't need online payment — you'll pay at the salon."
+              : booking.bookingStatus === "CANCELLED" && booking.cancellationReason
+              ? `This booking was cancelled: ${booking.cancellationReason}.`
+              : `This booking is ${booking.bookingStatus.toLowerCase().replace(/_/g, " ")} and can't be paid for.`}
           </p>
           <Button variant="outline" onClick={() => router.push("/bookings")}>
             Back to My Bookings
@@ -133,7 +140,7 @@ export default function PayBookingPage() {
         </Card>
       )}
 
-      {booking && booking.bookingStatus === "APPROVED" && (
+      {booking && booking.bookingStatus === "AWAITING_PAYMENT" && (
         <div className="mt-6 space-y-4">
           <p className="text-sm font-medium">Select Payment Method</p>
           <div className="space-y-3">

@@ -66,7 +66,7 @@ export default function BookingsPage() {
     const list = bookings || [];
     return {
       upcoming: list
-        .filter((b) => b.bookingStatus === "PENDING" || b.bookingStatus === "APPROVED")
+        .filter((b) => b.bookingStatus === "PENDING" || b.bookingStatus === "AWAITING_PAYMENT" || b.bookingStatus === "APPROVED")
         .sort((a, b) => a.scheduledStart.localeCompare(b.scheduledStart)),
       completed: list.filter((b) => b.bookingStatus === "COMPLETED").sort((a, b) => b.scheduledStart.localeCompare(a.scheduledStart)),
       cancelled: list
