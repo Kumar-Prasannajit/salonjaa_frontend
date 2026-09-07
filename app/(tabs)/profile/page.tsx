@@ -39,6 +39,8 @@ export default function ProfilePage() {
     <ProfileMenu
       user={account.user}
       initials={account.initials}
+      isSalonOwner={account.isSalonOwner}
+      isAdmin={account.isAdmin}
       editProfile={account.editProfile}
       setEditProfile={account.setEditProfile}
       profile={account.profile}
@@ -49,6 +51,8 @@ export default function ProfilePage() {
       notice={account.notice}
       signOut={account.signOut}
       onOpenAddresses={() => router.push("/profile/addresses")}
+      onOpenOwnerDashboard={() => router.push("/owner")}
+      onOpenAdminDashboard={() => router.push("/admin")}
     />
   );
 }

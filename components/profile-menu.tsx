@@ -8,6 +8,8 @@ import {
   LogOut,
   MapPin,
   Settings,
+  Shield,
+  Store,
   Wallet,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -30,8 +32,20 @@ import type { UseAccountReturn } from "@/hooks/use-account";
 // today (see frontend/CLAUDE.md).
 type ProfileMenuProps = Pick<
   UseAccountReturn,
-  "user" | "initials" | "editProfile" | "setEditProfile" | "profile" | "setProfile" | "saveProfile" | "busy" | "error" | "notice" | "signOut"
-> & { onOpenAddresses: () => void };
+  | "user"
+  | "initials"
+  | "isSalonOwner"
+  | "isAdmin"
+  | "editProfile"
+  | "setEditProfile"
+  | "profile"
+  | "setProfile"
+  | "saveProfile"
+  | "busy"
+  | "error"
+  | "notice"
+  | "signOut"
+> & { onOpenAddresses: () => void; onOpenOwnerDashboard: () => void; onOpenAdminDashboard: () => void };
 
 const COMING_SOON = [
   { icon: Wallet, label: "My Wallet" },
@@ -47,6 +61,8 @@ const COMING_SOON_SECONDARY = [
 export function ProfileMenu({
   user,
   initials,
+  isSalonOwner,
+  isAdmin,
   editProfile,
   setEditProfile,
   profile,
@@ -57,6 +73,8 @@ export function ProfileMenu({
   notice,
   signOut,
   onOpenAddresses,
+  onOpenOwnerDashboard,
+  onOpenAdminDashboard,
 }: ProfileMenuProps) {
   return (
     <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-3xl md:px-10 md:py-12">
@@ -140,6 +158,13 @@ export function ProfileMenu({
             </Card>
           ) : (
             <>
+              {(isSalonOwner || isAdmin) && (
+                <Card className="divide-y divide-border overflow-hidden p-0">
+                  {isSalonOwner && <NavRow icon={Store} label="Owner Dashboard" onClick={onOpenOwnerDashboard} />}
+                  {isAdmin && <NavRow icon={Shield} label="Admin Dashboard" onClick={onOpenAdminDashboard} />}
+                </Card>
+              )}
+
               <Card className="divide-y divide-border overflow-hidden p-0">
                 <NavRow icon={MapPin} label="Saved Addresses" onClick={onOpenAddresses} />
                 {COMING_SOON.map((item) => (

@@ -172,6 +172,14 @@ export type Booking = {
   cancelledAt: string | null;
   expiredAt: string | null;
   createdAt: string;
+  // Module 11 — resolved server-side on GET /bookings/:id, GET /bookings/my-bookings,
+  // and GET /salon-bookings only (not on the mutation-confirmation responses, which
+  // return null for all 4 here per that module's note). staffName is null when
+  // selectedStaffId wasn't set.
+  salonName: string | null;
+  branchName: string | null;
+  city: string | null;
+  staffName: string | null;
 };
 
 // GET /bookings/:id embeds this — the list endpoint above does not.
@@ -232,6 +240,157 @@ export type ReviewRatings = {
   hygieneRating: number;
   ambienceRating: number;
   productRating: number;
+};
+
+// ---- Salon Owner (app/owner/*) ----
+// Field lists checked directly against the backend's own *.types.ts DTOs
+// (salon.types.ts/branch.types.ts/staff.types.ts/service.types.ts), not just
+// frontend_handover.md's "contract not supplied" examples.
+
+// GET /salons (list) -> bare [{ id, name }] exactly, per frontend_handover.md.
+export type SalonListItem = { id: string; name: string };
+
+// GET /salons/:salonId, POST /salons, PATCH /salons/:salonId -> envelope-wrapped SalonDTO.
+export type Salon = {
+  id: string;
+  name: string;
+  description: string | null;
+  logo: string | null;
+  coverImage: string | null;
+  status: string;
+  verificationStatus: "PENDING" | "VERIFIED" | "REJECTED";
+  verificationReason: string | null;
+  createdAt: string;
+};
+
+export type Branch = {
+  id: string;
+  salonId: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  postalCode: string;
+  latitude: number | null;
+  longitude: number | null;
+  totalChairs: number;
+  openingTime: string;
+  closingTime: string;
+  status: string;
+};
+
+export type BranchHoliday = { id: string; date: string; reason: string | null };
+
+export type BranchCapacityRule = { branchId: string; maxCapacityOverride: number | null };
+
+// staffType has exactly two values on the backend (staff.validator.ts's zod enum) —
+// frontend_handover.md's own example body only shows "NORMAL", not the full set.
+export type Staff = {
+  id: string;
+  branchId: string;
+  fullName: string;
+  phone: string | null;
+  profileImage: string | null;
+  gender: string | null;
+  joiningDate: string | null;
+  experienceYears: number | null;
+  bio: string | null;
+  staffType: "NORMAL" | "STAR";
+  consultationFee: number | null;
+  salary: number | null;
+  status: string;
+};
+
+export type StaffLeave = {
+  id: string;
+  staffId: string;
+  startDateTime: string;
+  endDateTime: string;
+  reason: string | null;
+  status: string;
+};
+
+// GET/POST /services — named OwnerService (not Service) to avoid colliding
+// with PublicService above, which is a different, customer-facing shape.
+export type OwnerService = {
+  id: string;
+  branchId: string;
+  categoryId: string;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  basePrice: number;
+  imageUrl: string | null;
+  status: string;
+};
+
+// ---- Admin (app/admin/*) ----
+
+export type AdminSalon = Salon & {
+  ownerProfile: {
+    id: string;
+    userId: string;
+    businessName: string | null;
+    gstNumber: string | null;
+    panNumber: string | null;
+    kycStatus: string;
+  };
+};
+
+export type AdminRefund = {
+  id: string;
+  amount: number;
+  reason: string | null;
+  status: "PENDING" | "APPROVED" | "PROCESSING" | "COMPLETED" | "REJECTED";
+  approvedBy: string | null;
+  processedAt: string | null;
+  createdAt: string;
+  booking: {
+    id: string;
+    bookingNumber: string;
+    scheduledStart: string;
+    scheduledEnd: string;
+    bookingStatus: string;
+    totalAmount: number;
+  };
+  payment: {
+    id: string;
+    amount: number;
+    currency: string;
+    status: string;
+    providerPaymentId: string | null;
+    paidAt: string | null;
+  };
+  customer: { id: string; email: string; fullName: string | null } | null;
+};
+
+export type AdminComplaint = {
+  id: string;
+  type: "BOOKING" | "PAYMENT" | "SALON" | "STAFF" | "REFUND" | "OTHER";
+  referenceId: string | null;
+  description: string;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "REJECTED";
+  resolutionNotes: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  filedBy: { id: string; email: string; fullName: string | null };
+  linkedBooking?: { id: string; bookingNumber: string; bookingStatus: string } | null;
+  linkedPayment?: { id: string; amount: number; status: string } | null;
+};
+
+export type AdminReportOverview = {
+  totalBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  totalSalons: number;
+  verifiedSalons: number;
+  pendingSalons: number;
+  totalRevenue: number;
+  openComplaints: number;
+  pendingRefunds: number;
 };
 
 export type Payment = {

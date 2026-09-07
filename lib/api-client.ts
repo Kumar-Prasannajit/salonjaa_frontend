@@ -35,8 +35,24 @@ type Tokens = { accessToken: string; refreshToken: string };
 
 let tokens: Tokens | null = null;
 
-export function setTokens(next: Tokens | null) {
+// Subscribers are notified on every token change — login, sign-out, and the
+// silent refresh below. account-context uses this to recompute decoded JWT
+// roles (see lib/jwt.ts) without every caller needing to know that happened.
+type TokensListener = (tokens: Tokens | null) => void;
+const listeners = new Set<TokensListener>();
+
+function updateTokens(next: Tokens | null) {
   tokens = next;
+  listeners.forEach((fn) => fn(tokens));
+}
+
+export function setTokens(next: Tokens | null) {
+  updateTokens(next);
+}
+
+export function subscribeTokens(fn: TokensListener): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
 }
 
 export function getTokens() {
@@ -75,10 +91,10 @@ export async function apiFetch<T = unknown>(
     });
     if (refreshResponse.ok) {
       const { accessToken } = await refreshResponse.json();
-      tokens = { accessToken, refreshToken: tokens.refreshToken };
+      updateTokens({ accessToken, refreshToken: tokens.refreshToken });
       response = await rawRequest(path, options, accessToken);
     } else {
-      tokens = null;
+      updateTokens(null);
       throw new SessionExpiredError();
     }
   }

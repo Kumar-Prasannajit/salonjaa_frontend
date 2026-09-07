@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { apiFetch, messageFromError, setTokens, getTokens, ApiError, SessionExpiredError } from "@/lib/api-client";
+import { apiFetch, messageFromError, setTokens, getTokens, subscribeTokens, ApiError, SessionExpiredError } from "@/lib/api-client";
+import { decodeJwtRoles } from "@/lib/jwt";
 import { Address, AddressFormValues, blankAddressForm, User } from "@/lib/types";
 
 // All state and business logic for the Auth + Profile + Address flow,
@@ -27,6 +28,17 @@ export function useAccount() {
 
   const [addressForm, setAddressForm] = useState<AddressFormValues | null>(null);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
+
+  // Roles live only on the JWT access token's own `roles` claim — GET
+  // /users/me deliberately has none (per frontend_handover.md), and
+  // POST /auth/verify-otp's user.roles is a one-time snapshot that would go
+  // stale the moment a role is granted mid-session. Recomputed from
+  // api-client's token-change subscription so this stays correct across
+  // login, sign-out, and every silent refresh, not just at mount.
+  const [roles, setRoles] = useState<string[]>(() => decodeJwtRoles(getTokens()?.accessToken));
+  useEffect(() => subscribeTokens((t) => setRoles(decodeJwtRoles(t?.accessToken))), []);
+  const isSalonOwner = roles.includes("SALON_OWNER");
+  const isAdmin = roles.includes("ADMIN");
 
   useEffect(() => {
     if (!cooldown) return;
@@ -253,6 +265,9 @@ export function useAccount() {
     // shared
     isAuthenticated,
     user,
+    roles,
+    isSalonOwner,
+    isAdmin,
     initials,
     busy,
     cooldown,

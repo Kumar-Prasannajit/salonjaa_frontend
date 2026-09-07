@@ -1,0 +1,55 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { Lock, ShieldAlert } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useAccountContext } from "@/hooks/account-context";
+
+// Route-level protection for app/owner/* and app/admin/* — the "Owner
+// Dashboard"/"Admin Dashboard" links in the Profile menu only render when the
+// decoded role is present, but that's UI convenience, not security: this is
+// the actual gate, checked on every render of the protected layout, same as
+// how /bookings already nudges a signed-out visitor rather than 404ing.
+export function RoleGuard({ role, children }: { role: "SALON_OWNER" | "ADMIN"; children: React.ReactNode }) {
+  const account = useAccountContext();
+  const router = useRouter();
+  const roleLabel = role === "SALON_OWNER" ? "Salon Owner" : "Admin";
+
+  if (!account.isAuthenticated) {
+    return (
+      <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+        <Card className="flex size-16 items-center justify-center rounded-2xl border-primary/40 bg-card/60">
+          <Lock className="size-7 text-primary" strokeWidth={1.5} />
+        </Card>
+        <h1 className="text-xl font-semibold">Sign in required</h1>
+        <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+          Sign in with an account that has {roleLabel} access to open this dashboard.
+        </p>
+        <Button className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/profile")}>
+          Go to Profile to sign in
+        </Button>
+      </main>
+    );
+  }
+
+  const hasRole = role === "SALON_OWNER" ? account.isSalonOwner : account.isAdmin;
+  if (!hasRole) {
+    return (
+      <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+        <Card className="flex size-16 items-center justify-center rounded-2xl border-destructive/40 bg-card/60">
+          <ShieldAlert className="size-7 text-destructive" strokeWidth={1.5} />
+        </Card>
+        <h1 className="text-xl font-semibold">You don&apos;t have access</h1>
+        <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+          This account doesn&apos;t have {roleLabel} access. Roles are granted manually — ask whoever manages your account access.
+        </p>
+        <Button variant="outline" onClick={() => router.push("/profile")}>
+          Back to Profile
+        </Button>
+      </main>
+    );
+  }
+
+  return <>{children}</>;
+}
