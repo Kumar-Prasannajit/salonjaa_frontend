@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 
 const STATUS_STYLE: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Pending", className: "text-primary" },
+  AWAITING_PAYMENT: { label: "Awaiting Payment", className: "text-primary" },
   APPROVED: { label: "Approved", className: "text-success" },
   COMPLETED: { label: "Completed", className: "text-success" },
   CANCELLED: { label: "Cancelled", className: "text-destructive" },
@@ -32,8 +33,15 @@ export function SalonBookingCard({
 }) {
   const router = useRouter();
   const status = STATUS_STYLE[booking.bookingStatus] || { label: booking.bookingStatus, className: "text-muted-foreground" };
+  // Approve/reject only ever apply to a still-PENDING booking (the backend
+  // 409s otherwise) — an AWAITING_PAYMENT one has already been approved and
+  // is just waiting on the customer's online payment. Reschedule stays
+  // available through that window too: Module 14b keeps AWAITING_PAYMENT
+  // capacity-consuming exactly like APPROVED, and proposeReschedule's own
+  // isCapacityConsuming check allows it.
   const canDecide = booking.bookingStatus === "PENDING";
-  const canReschedule = booking.bookingStatus === "PENDING" || booking.bookingStatus === "APPROVED";
+  const canReschedule =
+    booking.bookingStatus === "PENDING" || booking.bookingStatus === "AWAITING_PAYMENT" || booking.bookingStatus === "APPROVED";
 
   return (
     <Card className="p-4">
@@ -56,6 +64,14 @@ export function SalonBookingCard({
         <span>{booking.customerName || "Registered customer"}</span>
         <span className="font-semibold">₹{booking.totalAmount}</span>
       </div>
+
+      {booking.bookingStatus === "AWAITING_PAYMENT" && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          {/* BOOKING_PAYMENT_WINDOW_MINUTES's current server default (15) — no endpoint returns this
+              number, so this is a best-effort figure, not a live countdown against the real deadline. */}
+          Waiting on the customer to pay online — auto-cancels after 15 minutes if unpaid.
+        </p>
+      )}
 
       {(canDecide || canReschedule) && (
         <div className="mt-4 flex flex-wrap gap-2">

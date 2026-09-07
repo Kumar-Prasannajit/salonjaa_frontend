@@ -13,11 +13,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // GET /salon-bookings?status= — booking.validator.ts's salonBookingsQuerySchema
-// only accepts PENDING|APPROVED|CANCELLED|COMPLETED (no REJECTED/EXPIRED
-// filter value), so those two tabs fetch unfiltered and bucket client-side —
-// same technique app/(tabs)/bookings/page.tsx already uses for its own tabs.
+// accepts PENDING|AWAITING_PAYMENT|APPROVED|CANCELLED|COMPLETED (Module 14b
+// added AWAITING_PAYMENT; no REJECTED/EXPIRED filter value exists), so those
+// two statuses fold into the Cancelled tab client-side — same technique
+// app/(tabs)/bookings/page.tsx already uses for its own tabs.
 const TABS = [
   { key: "PENDING", label: "Pending" },
+  { key: "AWAITING_PAYMENT", label: "Awaiting Payment" },
   { key: "APPROVED", label: "Approved" },
   { key: "COMPLETED", label: "Completed" },
   { key: "CANCELLED", label: "Cancelled" },
@@ -122,7 +124,7 @@ export default function OwnerBookingsPage() {
         {bookings !== null && bookings.length === 0 && (
           <Card className="flex flex-col items-center gap-3 border-dashed p-10 text-center">
             <CalendarOff className="size-8 text-accent" />
-            <p className="font-semibold">No {tab.toLowerCase()} bookings</p>
+            <p className="font-semibold">No {TABS.find((t) => t.key === tab)?.label.toLowerCase()} bookings</p>
           </Card>
         )}
 
