@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ToastProvider } from "@/hooks/toast-context";
 import { AccountProvider } from "@/hooks/account-context";
 import { BookingDraftProvider } from "@/hooks/booking-draft-context";
 
@@ -31,9 +32,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${dmSans.variable} ${dmMono.variable}`} suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <AccountProvider>
-            <BookingDraftProvider>{children}</BookingDraftProvider>
-          </AccountProvider>
+          <ToastProvider>
+            <AccountProvider>
+              <BookingDraftProvider>{children}</BookingDraftProvider>
+            </AccountProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>
