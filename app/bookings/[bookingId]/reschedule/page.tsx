@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import { toISODate } from "@/lib/utils";
 import type { AvailableSlot, BookingDetail } from "@/lib/types";
+import { useToastContext } from "@/hooks/toast-context";
 import { SlotPicker } from "@/components/slot-picker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function RescheduleBookingPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
+  const toast = useToastContext();
 
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -51,8 +53,11 @@ export default function RescheduleBookingPage() {
         body: JSON.stringify({ bookingDate: toISODate(date), slotId: slot.slotId, reason }),
       });
       setDone(true);
+      toast.success("Reschedule requested.");
     } catch (e) {
-      setSubmitError(messageFromError(e));
+      const msg = messageFromError(e);
+      setSubmitError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

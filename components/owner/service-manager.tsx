@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { ListChecks, Plus, X } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { OwnerService, ServiceCategory, Staff } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const BLANK_FORM = { categoryId: "", name: "", durationMinutes: "30", basePrice:
 // assigned staff (service.service.ts has assign/remove only) — the "Assigned
 // staff" panel below only reflects assignments made in this session.
 export function ServiceManager({ branchId }: { branchId: string }) {
+  const toast = useToastContext();
   const [services, setServices] = useState<OwnerService[] | null>(null);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
@@ -94,8 +96,11 @@ export function ServiceManager({ branchId }: { branchId: string }) {
       }
       setFormOpen(false);
       await load();
+      toast.success(editing ? "Service updated." : "Service added.");
     } catch (e) {
-      setFormError(messageFromError(e));
+      const msg = messageFromError(e);
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -107,8 +112,11 @@ export function ServiceManager({ branchId }: { branchId: string }) {
     try {
       await apiFetch(`/services/${s.id}`, { method: "DELETE" });
       setServices((all) => all?.filter((x) => x.id !== s.id) || null);
+      toast.success("Service removed.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -123,8 +131,11 @@ export function ServiceManager({ branchId }: { branchId: string }) {
         setAssignedByService((prev) => ({ ...prev, [serviceId]: [...(prev[serviceId] || []), staffRow] }));
       }
       setAssignSelection("");
+      toast.success("Staff assigned.");
     } catch (e) {
-      setAssignError(messageFromError(e));
+      const msg = messageFromError(e);
+      setAssignError(msg);
+      toast.error(msg);
     } finally {
       setAssignBusy(false);
     }
@@ -135,8 +146,11 @@ export function ServiceManager({ branchId }: { branchId: string }) {
     try {
       await apiFetch(`/services/${serviceId}/staff/${staffId}`, { method: "DELETE" });
       setAssignedByService((prev) => ({ ...prev, [serviceId]: (prev[serviceId] || []).filter((s) => s.id !== staffId) }));
+      toast.success("Staff unassigned.");
     } catch (e) {
-      setAssignError(messageFromError(e));
+      const msg = messageFromError(e);
+      setAssignError(msg);
+      toast.error(msg);
     }
   };
 

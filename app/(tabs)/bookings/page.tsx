@@ -6,6 +6,7 @@ import { CalendarOff, Lock } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import type { Booking, BookingDetail, Payment } from "@/lib/types";
 import { useAccountContext } from "@/hooks/account-context";
+import { useToastContext } from "@/hooks/toast-context";
 import { BookingCard } from "@/components/booking-card";
 import { CancelBookingDialog } from "@/components/cancel-booking-dialog";
 import { Card } from "@/components/ui/card";
@@ -30,6 +31,7 @@ type TabKey = (typeof TABS)[number]["key"];
 export default function BookingsPage() {
   const account = useAccountContext();
   const router = useRouter();
+  const toast = useToastContext();
 
   const [tab, setTab] = useState<TabKey>("upcoming");
   const [bookings, setBookings] = useState<Booking[] | null>(null);
@@ -100,9 +102,12 @@ export default function BookingsPage() {
     try {
       await apiFetch(`/bookings/${cancelTarget.id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
       setCancelTarget(null);
+      toast.success("Booking cancelled.");
       await loadBookings();
     } catch (e) {
-      setCancelError(messageFromError(e));
+      const msg = messageFromError(e);
+      setCancelError(msg);
+      toast.error(msg);
     } finally {
       setCancelBusy(false);
     }

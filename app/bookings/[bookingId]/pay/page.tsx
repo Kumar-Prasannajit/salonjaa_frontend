@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Building2, CreditCard, Info, Lock, Smartphone, Wallet } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import { openRazorpayCheckout } from "@/lib/razorpay";
+import { useToastContext } from "@/hooks/toast-context";
 import type { BookingDetail, Payment, PaymentOrder } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +32,7 @@ const METHODS = [
 export default function PayBookingPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
+  const toast = useToastContext();
 
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -69,14 +71,20 @@ export default function PayBookingPage() {
         prefill: { method },
         theme: { color: "#d9a044" },
         handler: (response) => verifyPayment(order.orderId, response.razorpay_payment_id, response.razorpay_signature),
-        modal: { ondismiss: () => setDismissedNotice(true) },
+        modal: {
+          ondismiss: () => {
+            setDismissedNotice(true);
+            toast.warning("Payment window closed before completing.");
+          },
+        },
       });
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) {
-        setError("A payment attempt for this booking is already in progress or already went through — check My Bookings before retrying.");
-      } else {
-        setError(messageFromError(e));
-      }
+      const msg =
+        e instanceof ApiError && e.status === 409
+          ? "A payment attempt for this booking is already in progress or already went through — check My Bookings before retrying."
+          : messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -87,11 +95,14 @@ export default function PayBookingPage() {
     setError("");
     try {
       await apiFetch("/payments/verify", { method: "POST", body: JSON.stringify({ orderId, paymentId, signature }) });
+      toast.success("Payment successful.");
       router.push(`/bookings/${bookingId}/confirmed`);
     } catch (e) {
       // Backend marks the payment FAILED on a bad signature, which — per
       // payment.service.ts — the next create-order call is allowed to retry.
-      setError(`${messageFromError(e)} You can try again below.`);
+      const msg = `${messageFromError(e)} You can try again below.`;
+      setError(msg);
+      toast.error(msg);
       setBusy(false);
     }
   };

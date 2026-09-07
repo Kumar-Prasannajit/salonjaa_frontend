@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { Salon } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // only reachable at all once RoleGuard has already confirmed that.
 export default function NewSalonPage() {
   const router = useRouter();
+  const toast = useToastContext();
   const [form, setForm] = useState({ name: "", description: "", businessName: "", gstNumber: "", panNumber: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -32,9 +34,12 @@ export default function NewSalonPage() {
       if (form.gstNumber.trim()) body.gstNumber = form.gstNumber.trim();
       if (form.panNumber.trim()) body.panNumber = form.panNumber.trim();
       const result = await apiFetch<{ data: Salon }>("/salons", { method: "POST", body: JSON.stringify(body) });
+      toast.success("Salon submitted for Admin review.");
       router.replace(`/owner/salons/${result.data.id}`);
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

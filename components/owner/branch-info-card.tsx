@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { Branch } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // for a branch (frontend_handover.md only documents POST/GET/GET/PATCH), so
 // there's deliberately no delete action here.
 export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdated: (b: Branch) => void }) {
+  const toast = useToastContext();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     name: branch.name,
@@ -55,8 +57,11 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
       const result = await apiFetch<{ data: Branch }>(`/branches/${branch.id}`, { method: "PATCH", body: JSON.stringify(body) });
       onUpdated(result.data);
       setEditing(false);
+      toast.success("Branch updated.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

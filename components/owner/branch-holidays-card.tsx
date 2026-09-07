@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { CalendarOff, Plus, X } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { BranchHoliday } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // stay accurate; a holiday created by another session/device won't appear
 // until this repo gets a listing endpoint to fetch it from.
 export function BranchHolidaysCard({ branchId }: { branchId: string }) {
+  const toast = useToastContext();
   const [holidays, setHolidays] = useState<BranchHoliday[]>([]);
   const [date, setDate] = useState("");
   const [reason, setReason] = useState("");
@@ -38,8 +40,11 @@ export function BranchHolidaysCard({ branchId }: { branchId: string }) {
       setHolidays((h) => [...h, result.data].sort((a, b) => a.date.localeCompare(b.date)));
       setDate("");
       setReason("");
+      toast.success("Holiday added.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -51,8 +56,11 @@ export function BranchHolidaysCard({ branchId }: { branchId: string }) {
     try {
       await apiFetch(`/branches/${branchId}/holidays/${holidayId}`, { method: "DELETE" });
       setHolidays((h) => h.filter((x) => x.id !== holidayId));
+      toast.success("Holiday removed.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setRemovingId(null);
     }

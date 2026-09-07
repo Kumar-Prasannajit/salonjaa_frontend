@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { apiFetch, messageFromError, setTokens, getTokens, subscribeTokens, ApiError, SessionExpiredError } from "@/lib/api-client";
 import { decodeJwtRoles } from "@/lib/jwt";
+import { useToastContext } from "@/hooks/toast-context";
 import { Address, AddressFormValues, blankAddressForm, User } from "@/lib/types";
 
 // All state and business logic for the Auth + Profile + Address flow,
@@ -10,6 +11,7 @@ import { Address, AddressFormValues, blankAddressForm, User } from "@/lib/types"
 // components can stay presentational. Every network call goes through
 // apiFetch (lib/api-client.ts) — nothing here calls fetch() directly.
 export function useAccount() {
+  const toast = useToastContext();
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [stage, setStage] = useState<"email" | "otp">("email");
@@ -154,9 +156,12 @@ export function useAccount() {
       setStage("otp");
       setCooldown(60);
       setNotice(body.message || "A verification code is on its way.");
+      toast.success(body.message || "A verification code is on its way.");
     } catch (e) {
       if (e instanceof ApiError && e.retryAfterSeconds) setCooldown(e.retryAfterSeconds);
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -177,10 +182,13 @@ export function useAccount() {
       setUser(body.user);
       setProfile({ fullName: body.user.name || "", gender: "", dob: "" });
       setTimeout(() => loadAccount(), 0);
+      toast.success("Signed in.");
     } catch {
       // Deliberately a fixed message here, not the server's — matches the
       // original behavior of never surfacing the raw verify-otp error text.
-      setError("That code is invalid or expired. Please resend a new one.");
+      const msg = "That code is invalid or expired. Please resend a new one.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -207,6 +215,7 @@ export function useAccount() {
         if (!(e instanceof ApiError)) throw e;
       } finally {
         resetToSignedOut();
+        toast.info("Signed out.");
       }
     } else {
       resetToSignedOut();
@@ -226,8 +235,11 @@ export function useAccount() {
       setUser(result.data);
       setEditProfile(false);
       setNotice("Your profile has been updated.");
+      toast.success("Your profile has been updated.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -278,8 +290,11 @@ export function useAccount() {
       setAddressForm(null);
       setEditingAddress(null);
       setNotice(editingAddress ? "Address updated." : "Address saved.");
+      toast.success(editingAddress ? "Address updated." : "Address saved.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -292,8 +307,11 @@ export function useAccount() {
       await authedFetch(`/users/me/addresses/${id}`, { method: "DELETE" });
       setAddresses((all) => all.filter((a) => a.id !== id));
       setNotice("Address removed.");
+      toast.success("Address removed.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     }
   };
 

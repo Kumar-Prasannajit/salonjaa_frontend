@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Flag, MessageSquareOff, Store } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import { useAccountContext } from "@/hooks/account-context";
+import { useToastContext } from "@/hooks/toast-context";
 import type { Review } from "@/lib/types";
 import { StarRating } from "@/components/star-rating";
 import { ReportReviewDialog } from "@/components/report-review-dialog";
@@ -22,6 +23,7 @@ export default function SalonReviewsPage() {
   const { salonId } = useParams<{ salonId: string }>();
   const router = useRouter();
   const account = useAccountContext();
+  const toast = useToastContext();
 
   const [reviews, setReviews] = useState<Review[] | null>(null);
   const [error, setError] = useState("");
@@ -47,12 +49,16 @@ export default function SalonReviewsPage() {
       await apiFetch(`/reviews/${reportTarget}/report`, { method: "POST", body: JSON.stringify({ reason: reason.trim() || undefined }) });
       setReportedIds((prev) => new Set(prev).add(reportTarget));
       setReportTarget(null);
+      toast.success("Review reported.");
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         setReportedIds((prev) => new Set(prev).add(reportTarget));
         setReportTarget(null);
+        toast.info("You already reported this review.");
       } else {
-        setReportError(messageFromError(e));
+        const msg = messageFromError(e);
+        setReportError(msg);
+        toast.error(msg);
       }
     } finally {
       setReportBusy(false);

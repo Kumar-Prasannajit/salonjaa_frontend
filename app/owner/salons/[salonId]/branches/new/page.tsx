@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { Branch } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ const BLANK = {
 export default function NewBranchPage() {
   const { salonId } = useParams<{ salonId: string }>();
   const router = useRouter();
+  const toast = useToastContext();
   const [form, setForm] = useState(BLANK);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -61,9 +63,12 @@ export default function NewBranchPage() {
       if (form.longitude.trim()) body.longitude = Number(form.longitude);
 
       const result = await apiFetch<{ data: Branch }>("/branches", { method: "POST", body: JSON.stringify(body) });
+      toast.success("Branch created.");
       router.replace(`/owner/branches/${result.data.id}`);
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

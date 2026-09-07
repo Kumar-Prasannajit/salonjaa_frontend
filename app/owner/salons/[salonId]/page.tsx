@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, MapPinned, Plus, Trash2 } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { Branch, Salon } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ const VERIFICATION_VARIANT: Record<Salon["verificationStatus"], "default" | "des
 export default function OwnerSalonDetailPage() {
   const { salonId } = useParams<{ salonId: string }>();
   const router = useRouter();
+  const toast = useToastContext();
 
   const [salon, setSalon] = useState<Salon | null>(null);
   const [branches, setBranches] = useState<Branch[] | null>(null);
@@ -74,8 +76,11 @@ export default function OwnerSalonDetailPage() {
       const result = await apiFetch<{ data: Salon }>(`/salons/${salonId}`, { method: "PATCH", body: JSON.stringify(body) });
       setSalon(result.data);
       setEditing(false);
+      toast.success("Salon updated.");
     } catch (e) {
-      setFormError(messageFromError(e));
+      const msg = messageFromError(e);
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -86,9 +91,12 @@ export default function OwnerSalonDetailPage() {
     setDeleting(true);
     try {
       await apiFetch(`/salons/${salonId}`, { method: "DELETE" });
+      toast.success("Salon deleted.");
       router.replace("/owner/salons");
     } catch (e) {
-      setLoadError(messageFromError(e));
+      const msg = messageFromError(e);
+      setLoadError(msg);
+      toast.error(msg);
       setDeleting(false);
     }
   };

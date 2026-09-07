@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/utils";
+import { useToastContext } from "@/hooks/toast-context";
 import type { AdminRefund } from "@/lib/types";
 import { ReasonDialog } from "@/components/reason-dialog";
 import { Card } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function AdminRefundDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToastContext();
 
   const [refund, setRefund] = useState<AdminRefund | null>(null);
   const [error, setError] = useState("");
@@ -47,8 +49,11 @@ export default function AdminRefundDetailPage() {
       const result = await apiFetch<{ data: AdminRefund }>(`/admin/refunds/${id}/${path}`, { method: "POST", body: JSON.stringify(body) });
       setRefund(result.data);
       setDialog(null);
+      toast.success(path === "approve" ? "Refund approved." : "Refund rejected.");
     } catch (e) {
-      setDialogError(messageFromError(e));
+      const msg = messageFromError(e);
+      setDialogError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, BadgePercent, Check } from "lucide-react";
-import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
+import { apiFetch, messageFromError } from "@/lib/api-client";
 import type { BookingCreateResult, CouponValidation } from "@/lib/types";
 import { useBookingDraft } from "@/hooks/booking-draft-context";
 import { useAccountContext } from "@/hooks/account-context";
+import { useToastContext } from "@/hooks/toast-context";
 import { CheckoutAuthStep } from "@/components/checkout-auth-step";
 import { CheckoutBasicDetailsStep } from "@/components/checkout-basic-details-step";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ export default function CheckoutPage() {
   const { draft } = useBookingDraft();
   const account = useAccountContext();
   const { isAuthenticated, user } = account;
+  const toast = useToastContext();
 
   const [paymentMethod, setPaymentMethod] = useState<"ONLINE" | "PAY_AT_SALON">("ONLINE");
 
@@ -76,8 +78,11 @@ export default function CheckoutPage() {
         body: JSON.stringify({ couponCode, bookingAmount: subtotal }),
       });
       setCouponResult(result);
+      toast.success(`${couponCode} is valid — ₹${result.discount} off.`);
     } catch (e) {
-      setCouponError(messageFromError(e));
+      const msg = messageFromError(e);
+      setCouponError(msg);
+      toast.error(msg);
     } finally {
       setCouponBusy(false);
     }
@@ -104,11 +109,14 @@ export default function CheckoutPage() {
       const result = await apiFetch<BookingCreateResult>("/bookings", { method: "POST", body: JSON.stringify(body) });
       router.push(`/book/${branchId}/requested?bookingId=${result.bookingId}&status=${result.status}&paymentMethod=${paymentMethod}`);
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) {
-        setBookingError("That slot was just taken. Please go back and pick another time.");
-      } else {
-        setBookingError(messageFromError(e));
-      }
+      // The real backend message (e.g. "Selected staff is no longer
+      // available for this time") is more useful than a generic override —
+      // surfaced via both the inline alert and a toast, since this button
+      // sits at the bottom of a scrollable page and an inline-only message
+      // can render off-screen.
+      const msg = messageFromError(e);
+      setBookingError(msg);
+      toast.error(msg);
     } finally {
       setBookingBusy(false);
     }

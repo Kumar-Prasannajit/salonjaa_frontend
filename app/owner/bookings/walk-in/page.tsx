@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import { toISODate } from "@/lib/utils";
 import type { AvailableSlot, Branch, OwnerService, Staff } from "@/lib/types";
+import { useToastContext } from "@/hooks/toast-context";
 import { SlotPicker } from "@/components/slot-picker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // APPROVED. Mirrors the customer's services→stylist→slot ordering in one page.
 export default function WalkInBookingPage() {
   const router = useRouter();
+  const toast = useToastContext();
 
   const [branches, setBranches] = useState<Branch[] | null>(null);
   const [branchId, setBranchId] = useState("");
@@ -80,8 +82,17 @@ export default function WalkInBookingPage() {
         }),
       });
       setCreated(result.data.bookingNumber);
+      toast.success(`${result.data.bookingNumber} booked and approved.`);
     } catch (e) {
-      setSubmitError(messageFromError(e));
+      // This form's submit button lives inside SlotPicker, well below this
+      // page's fold — the exact case that motivated adding toasts at all
+      // (e.g. a 409 "Selected staff is no longer available for this time"
+      // going unnoticed above a tall scrollable page). Toast guarantees
+      // visibility regardless of scroll position; the inline alert stays
+      // for anyone looking at the top of the page too.
+      const msg = messageFromError(e);
+      setSubmitError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

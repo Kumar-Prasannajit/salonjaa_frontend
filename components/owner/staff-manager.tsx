@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Plus, Users, X } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { Staff, StaffLeave } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const BLANK_FORM = { fullName: "", phone: "", staffType: "NORMAL" as "NORMAL" | 
 // see PROGRESS.md, no GET anywhere) so, like the holidays card, only leave
 // created in this session is shown/cancellable here.
 export function StaffManager({ branchId }: { branchId: string }) {
+  const toast = useToastContext();
   const [staff, setStaff] = useState<Staff[] | null>(null);
   const [error, setError] = useState("");
 
@@ -91,8 +93,11 @@ export function StaffManager({ branchId }: { branchId: string }) {
       }
       setFormOpen(false);
       await load();
+      toast.success(editing ? "Staff updated." : "Staff added.");
     } catch (e) {
-      setFormError(messageFromError(e));
+      const msg = messageFromError(e);
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -104,8 +109,11 @@ export function StaffManager({ branchId }: { branchId: string }) {
     try {
       await apiFetch(`/staff/${s.id}`, { method: "DELETE" });
       setStaff((all) => all?.filter((x) => x.id !== s.id) || null);
+      toast.success("Staff removed.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -123,8 +131,11 @@ export function StaffManager({ branchId }: { branchId: string }) {
       const result = await apiFetch<{ data: StaffLeave }>(`/staff/${leaveStaffId}/leave`, { method: "POST", body: JSON.stringify(body) });
       setLeaves((prev) => ({ ...prev, [leaveStaffId]: [...(prev[leaveStaffId] || []), result.data] }));
       setLeaveForm({ startDateTime: "", endDateTime: "", reason: "" });
+      toast.success("Leave added.");
     } catch (e) {
-      setLeaveError(messageFromError(e));
+      const msg = messageFromError(e);
+      setLeaveError(msg);
+      toast.error(msg);
     } finally {
       setLeaveBusy(false);
     }
@@ -135,8 +146,11 @@ export function StaffManager({ branchId }: { branchId: string }) {
     try {
       await apiFetch(`/staff/${staffId}/leave/${leaveId}`, { method: "DELETE" });
       setLeaves((prev) => ({ ...prev, [staffId]: (prev[staffId] || []).filter((l) => l.id !== leaveId) }));
+      toast.success("Leave cancelled.");
     } catch (e) {
-      setLeaveError(messageFromError(e));
+      const msg = messageFromError(e);
+      setLeaveError(msg);
+      toast.error(msg);
     }
   };
 

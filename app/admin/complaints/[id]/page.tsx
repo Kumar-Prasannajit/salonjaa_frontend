@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/utils";
+import { useToastContext } from "@/hooks/toast-context";
 import type { AdminComplaint } from "@/lib/types";
 import { ReasonDialog } from "@/components/reason-dialog";
 import { Card } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export default function AdminComplaintDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToastContext();
 
   const [complaint, setComplaint] = useState<AdminComplaint | null>(null);
   const [error, setError] = useState("");
@@ -48,8 +50,11 @@ export default function AdminComplaintDetailPage() {
       const result = await apiFetch<{ data: AdminComplaint }>(`/admin/complaints/${id}/${path}`, { method: "POST", body: JSON.stringify(body) });
       setComplaint(result.data);
       setDialog(null);
+      toast.success(path === "resolve" ? "Complaint resolved." : "Complaint rejected.");
     } catch (e) {
-      setDialogError(messageFromError(e));
+      const msg = messageFromError(e);
+      setDialogError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

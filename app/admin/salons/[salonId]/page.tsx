@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { AdminSalon } from "@/lib/types";
 import { ReasonDialog } from "@/components/reason-dialog";
 import { Card } from "@/components/ui/card";
@@ -24,6 +25,7 @@ const VARIANT: Record<AdminSalon["verificationStatus"], "default" | "destructive
 export default function AdminSalonDetailPage() {
   const { salonId } = useParams<{ salonId: string }>();
   const router = useRouter();
+  const toast = useToastContext();
 
   const [salon, setSalon] = useState<AdminSalon | null>(null);
   const [error, setError] = useState("");
@@ -46,16 +48,19 @@ export default function AdminSalonDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salonId]);
 
-  const act = async (path: string, body?: Record<string, string>) => {
+  const act = async (path: string, label: string, body?: Record<string, string>) => {
     setBusy(true);
     setError("");
     try {
       const result = await apiFetch<{ data: AdminSalon }>(`/admin/salons/${salonId}/${path}`, { method: "POST", body: body ? JSON.stringify(body) : undefined });
       setSalon(result.data);
       setDialog(null);
+      toast.success(label);
     } catch (e) {
-      if (dialog) setDialogError(messageFromError(e));
-      else setError(messageFromError(e));
+      const msg = messageFromError(e);
+      if (dialog) setDialogError(msg);
+      else setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -104,7 +109,7 @@ export default function AdminSalonDetailPage() {
           <div className="flex flex-wrap gap-2">
             {salon.verificationStatus === "PENDING" && (
               <>
-                <Button disabled={busy} className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => act("verify")}>
+                <Button disabled={busy} className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => act("verify", "Salon verified.")}>
                   Verify
                 </Button>
                 <Button disabled={busy} variant="outline" className="flex-1 text-destructive hover:text-destructive" onClick={() => setDialog("reject")}>
@@ -118,7 +123,7 @@ export default function AdminSalonDetailPage() {
               </Button>
             )}
             {salon.status === "SUSPENDED" && (
-              <Button disabled={busy} className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => act("reactivate")}>
+              <Button disabled={busy} className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => act("reactivate", "Salon reactivated.")}>
                 Reactivate
               </Button>
             )}
@@ -134,7 +139,7 @@ export default function AdminSalonDetailPage() {
         destructive
         busy={busy}
         error={dialogError}
-        onConfirm={(reason) => act("reject", { reason })}
+        onConfirm={(reason) => act("reject", "Salon rejected.", { reason })}
         onClose={() => {
           setDialog(null);
           setDialogError("");
@@ -149,7 +154,7 @@ export default function AdminSalonDetailPage() {
         destructive
         busy={busy}
         error={dialogError}
-        onConfirm={(reason) => act("suspend", { reason })}
+        onConfirm={(reason) => act("suspend", "Salon suspended.", { reason })}
         onClose={() => {
           setDialog(null);
           setDialogError("");

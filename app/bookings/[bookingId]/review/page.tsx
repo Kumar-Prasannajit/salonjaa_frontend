@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Lock } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { BookingDetail, Review, ReviewRatings } from "@/lib/types";
 import { StarRating } from "@/components/star-rating";
 import { Card } from "@/components/ui/card";
@@ -34,6 +35,7 @@ const BLANK: ReviewRatings = { overallRating: 0, serviceRating: 0, staffRating: 
 export default function ReviewBookingPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
+  const toast = useToastContext();
 
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [existing, setExisting] = useState<Review | null>(null);
@@ -86,12 +88,14 @@ export default function ReviewBookingPage() {
         await apiFetch("/reviews", { method: "POST", body: JSON.stringify({ bookingId, ...body }) });
       }
       setDone(true);
+      toast.success(existing ? "Review updated." : "Thanks for your review!");
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) {
-        setError("A review for this booking already exists — reload this page to edit it.");
-      } else {
-        setError(messageFromError(e));
-      }
+      const msg =
+        e instanceof ApiError && e.status === 409
+          ? "A review for this booking already exists — reload this page to edit it."
+          : messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

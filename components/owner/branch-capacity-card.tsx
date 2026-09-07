@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { BranchCapacityRule } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // for the current override exists, so — like the holidays card — this only
 // shows what's been set in this session, not history from elsewhere.
 export function BranchCapacityCard({ branchId }: { branchId: string }) {
+  const toast = useToastContext();
   const [override, setOverride] = useState<number | null>(null);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,8 +36,11 @@ export function BranchCapacityCard({ branchId }: { branchId: string }) {
         body: JSON.stringify({ maxCapacityOverride: Number(value) }),
       });
       setOverride(result.data.maxCapacityOverride);
+      toast.success("Capacity override set.");
     } catch (e) {
-      setError(messageFromError(e));
+      const msg = messageFromError(e);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarOff, Plus } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
+import { useToastContext } from "@/hooks/toast-context";
 import type { Booking } from "@/lib/types";
 import { SalonBookingCard } from "@/components/owner/salon-booking-card";
 import { ReasonDialog } from "@/components/reason-dialog";
@@ -28,6 +29,7 @@ type TabKey = (typeof TABS)[number]["key"];
 
 export default function OwnerBookingsPage() {
   const router = useRouter();
+  const toast = useToastContext();
   const [tab, setTab] = useState<TabKey>("PENDING");
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState("");
@@ -59,9 +61,12 @@ export default function OwnerBookingsPage() {
     try {
       await apiFetch(`/salon-bookings/${approveTarget.id}/approve`, { method: "POST", body: JSON.stringify({ notes: notes || undefined }) });
       setApproveTarget(null);
+      toast.success("Booking approved.");
       await load(tab);
     } catch (e) {
-      setDialogError(messageFromError(e));
+      const msg = messageFromError(e);
+      setDialogError(msg);
+      toast.error(msg);
     } finally {
       setBusyId(null);
     }
@@ -74,9 +79,12 @@ export default function OwnerBookingsPage() {
     try {
       await apiFetch(`/salon-bookings/${rejectTarget.id}/reject`, { method: "POST", body: JSON.stringify({ reason }) });
       setRejectTarget(null);
+      toast.success("Booking rejected.");
       await load(tab);
     } catch (e) {
-      setDialogError(messageFromError(e));
+      const msg = messageFromError(e);
+      setDialogError(msg);
+      toast.error(msg);
     } finally {
       setBusyId(null);
     }
