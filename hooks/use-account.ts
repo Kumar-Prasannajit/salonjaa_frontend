@@ -103,6 +103,44 @@ export function useAccount() {
     setAddresses(list.data || []);
   };
 
+  // Runs once on mount. Before Module 14a (backend), a page reload always
+  // started fully signed-out — the in-memory token was the only thing that
+  // ever proved a session existed, and it's gone the instant the page
+  // reloads. Now the backend also sets accessToken/refreshToken as httpOnly
+  // cookies alongside login, so an empty-body refresh-token call (with
+  // credentials: "include", see lib/api-client.ts) can recover a still-valid
+  // session purely from the cookie the browser already has, no stored token
+  // needed. A genuinely expired/absent session just 401s here and this
+  // silently leaves the app in its normal signed-out starting state — no
+  // error shown, same as before this existed.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const body = await apiFetch<{ accessToken: string }>(
+          "/auth/refresh-token",
+          { method: "POST", body: JSON.stringify({}) },
+          { auth: false }
+        );
+        if (cancelled) return;
+        // No refreshToken string to store — restoring from the cookie
+        // doesn't hand one back (POST /auth/refresh-token only ever returns
+        // { accessToken }). lib/api-client.ts's retry logic already treats a
+        // missing refreshToken as "fall back to the cookie" for exactly
+        // this case.
+        setTokens({ accessToken: body.accessToken, refreshToken: "" });
+        setIsAuthenticated(true);
+        await loadAccount();
+      } catch {
+        // No valid session cookie (or none at all) — stay signed out.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const sendOtp = async (e: FormEvent) => {
     e.preventDefault();
     clearFeedback();
@@ -152,7 +190,16 @@ export function useAccount() {
     const tokens = getTokens();
     if (callApi && tokens) {
       try {
-        await apiFetch("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken: tokens.refreshToken }) });
+        // Same empty-body-falls-back-to-cookie treatment as the refresh
+        // retry in lib/api-client.ts — a cookie-restored session has no
+        // in-memory refreshToken to send, and the backend's logout accepts
+        // either source (Module 14a). The CSRF header this now needs is
+        // attached automatically by apiFetch/rawRequest for every mutating
+        // request, no extra handling needed here.
+        await apiFetch("/auth/logout", {
+          method: "POST",
+          body: JSON.stringify(tokens.refreshToken ? { refreshToken: tokens.refreshToken } : {}),
+        });
       } catch (e) {
         // A non-2xx logout response is ignored, same as before (the old
         // code never checked response.ok here) — only a network-level

@@ -2,10 +2,19 @@
 // the Authorization header, and retries once on 401 after refreshing the
 // access token. Every other file calls apiFetch() — never fetch() directly.
 //
-// Tokens live in memory only (module-level, not React state, not
-// localStorage), matching the behavior of the inline api() helper this
-// replaced: a full page reload still signs the user out. That's an
-// existing gap, not something introduced here — see frontend/CLAUDE.md.
+// Tokens live in memory (module-level, not React state, not localStorage) as
+// the source of truth for the current session immediately after login — see
+// hooks/use-account.ts's verifyOtp. That alone doesn't survive a reload,
+// which is the bug docs/KNOWN_BACKEND_LIMITATIONS.md's "Sessions don't
+// survive a page reload" entry describes. Module 14a (backend) fixed this at
+// the root: POST /auth/verify-otp and POST /auth/refresh-token now *also*
+// set accessToken/refreshToken as httpOnly cookies (alongside the unchanged
+// JSON body), so `credentials: "include"` below is what makes a reload
+// recoverable — hooks/use-account.ts's mount-time restore effect calls
+// POST /auth/refresh-token with an empty body and lets the cookie answer.
+// A companion, deliberately non-httpOnly `csrfToken` cookie must be echoed
+// back as `X-CSRF-Token` on every mutating request or the backend 403s a
+// cookie-authenticated one (a Bearer-header request is never CSRF-checked).
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 
@@ -59,11 +68,37 @@ export function getTokens() {
   return tokens;
 }
 
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+// No cookie library needed for a single-cookie read — this only ever reads
+// the deliberately non-httpOnly `csrfToken` cookie (Module 14a), never the
+// httpOnly accessToken/refreshToken ones, which JS can't read by design.
+function readCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 async function rawRequest(path: string, options: RequestInit, accessToken?: string): Promise<Response> {
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-  return fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+
+  // Only meaningful when auth actually resolved via the cookie rather than
+  // the Authorization header above, but harmless to always send once
+  // credentials are included — the backend only checks it for a
+  // cookie-authenticated mutating request.
+  const method = (options.method || "GET").toUpperCase();
+  if (MUTATING_METHODS.has(method)) {
+    const csrfToken = readCookie("csrfToken");
+    if (csrfToken) headers.set("X-CSRF-Token", csrfToken);
+  }
+
+  // credentials: "include" is what makes the browser actually send/receive
+  // the httpOnly accessToken/refreshToken/csrfToken cookies — needed here
+  // and on the refresh-token retry below, since both go through this
+  // function.
+  return fetch(`${API_BASE_URL}${path}`, { ...options, headers, credentials: "include" });
 }
 
 async function toApiError(response: Response): Promise<ApiError> {
@@ -84,10 +119,17 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   let response = await rawRequest(path, options, auth ? tokens?.accessToken : undefined);
 
-  if (auth && response.status === 401 && tokens?.refreshToken) {
+  // Guards on `tokens` being present (we believe there's a session), not on
+  // `tokens.refreshToken` specifically — a session restored on mount (see
+  // hooks/use-account.ts) has no in-memory refreshToken string at all, only
+  // the httpOnly cookie, and still needs this retry path to work. When we do
+  // have a real refreshToken, it's sent in the body exactly as before
+  // (unchanged behavior for a normal login); when we don't, an empty body
+  // lets the backend fall back to the cookie.
+  if (auth && response.status === 401 && tokens) {
     const refreshResponse = await rawRequest("/auth/refresh-token", {
       method: "POST",
-      body: JSON.stringify({ refreshToken: tokens.refreshToken }),
+      body: JSON.stringify(tokens.refreshToken ? { refreshToken: tokens.refreshToken } : {}),
     });
     if (refreshResponse.ok) {
       const { accessToken } = await refreshResponse.json();
