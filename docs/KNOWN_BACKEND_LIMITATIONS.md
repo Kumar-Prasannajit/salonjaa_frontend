@@ -24,7 +24,7 @@ both exist. See Module 13 in `../salonjaa-backend/docs/PROGRESS.md`.
 `app/bookings/[bookingId]/pay/page.tsx` already calls the cancel endpoint
 from Razorpay's `ondismiss` handler, per `frontend/CLAUDE.md`.
 
-## Sessions don't survive a page reload or a backgrounded/discarded tab
+## Sessions don't survive a page reload or a backgrounded/discarded tab — Backend resolved, frontend integration still needed
 
 Found while manually testing all three roles at once (3 browser profiles,
 one each logged in as Customer/Salon Owner/Admin): switching back to a
@@ -32,56 +32,86 @@ profile that had been in the background for a while asks to sign in again,
 even though nothing server-side ever invalidated that session — the
 `refresh_tokens` row is still valid and unrevoked.
 
-Root cause is entirely frontend, but the fix needs a contract change here:
-`POST /auth/verify-otp` and `POST /auth/refresh-token` return
-`accessToken`/`refreshToken` in the JSON body (per `frontend_handover.md`),
-so `Salonjaa_Frontend`'s `lib/api-client.ts` necessarily holds them in a
-plain in-memory JS variable — anything more persistent that's still
-JS-readable (`localStorage`) is an XSS token-theft surface, which is why it
-was built that way rather than an oversight. In-memory means a reload, or
-Chrome discarding a backgrounded tab/window (easy to hit with 3 role-tabs
-open at once), silently drops the session and forces a fresh OTP login.
+**Backend now issues `accessToken`/`refreshToken` as `httpOnly`, `SameSite=Lax`
+cookies** (`Secure` in production only) on `POST /auth/verify-otp` and
+`POST /auth/refresh-token`, alongside the unchanged JSON body — see
+`../salonjaa-backend/docs/PROGRESS.md`'s Module 14a entry. A companion
+`csrfToken` cookie (deliberately **not** `httpOnly`, so JS can read it) is
+also set; a cookie-authenticated `POST`/`PUT`/`PATCH`/`DELETE` now requires
+an `X-CSRF-Token` header matching it, or the backend returns `403`. A
+Bearer-header request (today's `lib/api-client.ts` behavior) is unaffected
+and never needs the CSRF header — this is additive, nothing existing broke.
+Verified end-to-end against a live backend instance: cookie-only
+authenticated reads, CSRF `403`/`200` on a mutating request, Bearer requests
+still working unchanged, cookie-only refresh, and logout clearing all three
+cookies and actually invalidating the session.
 
-**Needed backend change:** issue `accessToken`/`refreshToken` as `httpOnly`,
-`Secure`, `SameSite` cookies via `Set-Cookie` on both of those endpoints
-(alongside or instead of the JSON body), with CORS configured to allow
-credentials from the frontend's origin. Once that ships, `lib/api-client.ts`
-can switch from attaching `Authorization: Bearer <token>` to sending
-`credentials: "include"` and letting the browser hold the cookie — removing
-the in-memory tradeoff entirely, and making it immune to XSS token theft to
-boot. Needs CSRF protection considered for state-changing endpoints once
-cookies are the auth mechanism.
+**Still needed — frontend integration** (not done as part of this fix):
+`lib/api-client.ts`'s `apiFetch()` needs `credentials: "include"` on every
+call so the browser sends the cookies automatically; state-changing calls
+need an `X-CSRF-Token` header read from the (JS-readable) `csrfToken`
+cookie; and `hooks/use-account.ts`/`account-context.tsx` needs an on-mount
+session-restore path (e.g. a `credentials: "include"` call, no stored token
+required) instead of starting signed-out whenever the in-memory token is
+gone. Until that lands, this bug is still observable in the browser even
+though the backend no longer causes it.
 
-## No `AWAITING_PAYMENT` booking status or a "pay after service" option
+## ~~No `AWAITING_PAYMENT` booking status or a "pay after service" option~~ — Backend resolved (Module 14b), frontend integration still needed
 
-`bookingStatusEnum` (`enums.ts`) has no `AWAITING_PAYMENT` value — an
-`APPROVED` booking stays `APPROVED` even once payment is due, in progress, or
-skipped. This was already flagged as not-yet-enforced in
-`../salonjaa-backend/docs/PROGRESS.md`'s Module 6/7 notes ("the client's
-described 'approve then 15-minute payment window' ... not implemented"), but
-manual testing surfaced the customer-facing gap directly: there's no way for
-My Bookings to show "Awaiting Payment" as its own filterable state, and no
-way for a customer to choose to pay later / pay at the salon instead of
-online.
+`bookingStatusEnum` had no `AWAITING_PAYMENT` value — an `APPROVED` booking
+stayed `APPROVED` even once payment was due, in progress, or skipped. This
+was flagged as not-yet-enforced since Module 6/7 ("the client's described
+'approve then 15-minute payment window' ... not implemented"); manual
+testing surfaced the customer-facing gap directly (My Bookings had no
+"Awaiting Payment" state, no pay-at-salon choice).
 
-Separately, `paymentMethodEnum` already has a `PAY_AT_SALON` value
-(`enums.ts`) but nothing in `booking.service.ts` or `payment.service.ts` ever
-sets or asks for it — every booking implicitly assumes online payment via
-Razorpay once approved.
+**Backend now has a real `AWAITING_PAYMENT` status** — see
+`../salonjaa-backend/docs/PROGRESS.md`'s Module 14b entry. `POST /bookings`
+accepts an optional `paymentMethod` (`"ONLINE"` default, or
+`"PAY_AT_SALON"`). When the salon owner approves an `ONLINE` booking it now
+stops at `AWAITING_PAYMENT` (not `APPROVED`) with a real
+`BOOKING_PAYMENT_WINDOW_MINUTES`-minute window (15, the client's own stated
+figure) before it auto-cancels if unpaid; `POST /payments/create-order` now
+requires `AWAITING_PAYMENT`; a successful `POST /payments/verify` moves it
+to `APPROVED`. A `PAY_AT_SALON` booking is unaffected — approve still goes
+straight to `APPROVED`, no online payment ever expected. `GET
+/bookings/my-bookings`'s `status` filter and `BookingDTO` both now expose
+this (`paymentMethod` field, `AWAITING_PAYMENT` as a filterable status).
+Verified end-to-end against a live backend instance with real data,
+including forcing the payment window to 1 minute to confirm the actual
+auto-cancel transition (not just reading the code).
 
-**Needed backend change:** a real `AWAITING_PAYMENT` (or similar) status
-transition once a booking is `APPROVED` and payment is expected but not yet
-`SUCCESS`, exposed on `GET /bookings/my-bookings`'s `status` filter, plus a
-way for `POST /bookings` (or a later step) to record the customer's chosen
-payment method (`ONLINE` vs `PAY_AT_SALON`) so the frontend can branch UI
-accordingly instead of always pushing straight to Razorpay checkout.
+**Still needed — frontend integration** (not done as part of this fix): a
+payment-method choice at Checkout (`ONLINE` vs `PAY_AT_SALON`, passed as
+`POST /bookings`'s new `paymentMethod` field); My Bookings showing
+`AWAITING_PAYMENT` as its own state with a visible countdown/urgency cue
+before the window lapses; and handling the case where a booking silently
+becomes `CANCELLED` because the window expired while the customer was
+looking elsewhere.
 
-## Walk-in booking created despite an existing overlapping booking for the same staff — needs verification with real data
+## ~~Walk-in booking created despite an existing overlapping booking for the same staff~~ — Investigated, not a backend bug
 
 Manually reproduced: booked a slot as a customer with a specific stylist
 selected, then — before that booking was approved — created a walk-in as the
 salon owner for the same branch/date/slot/stylist. The walk-in was created
 successfully instead of being rejected.
+
+**Investigated against the real repro data and confirmed not reproducible.**
+The two `bookings` rows from the actual repro session
+(`0cdb07e8-5e38-4727-8e0a-e4bef2cbf6d0` and `3c3f40ad-4e57-448b-82c2-1f595480ed8d`,
+both on The Luxe Salon's branch) turned out to have **different**
+`selectedStaffId` values — `733d6675…` (Rahul Verma) on the original online
+booking vs. `72cbb996…` (Ananya Reddy) on the walk-in — i.e. hypothesis 1
+below, not a same-staff conflict at all; two different staff serving
+overlapping slots is correct, not a bug. A live re-test with the *actual*
+same `staffId`/branch/slot combination (customer books Rahul Verma
+09:00–09:45 → walk-in attempts Rahul Verma, same branch, same slot)
+correctly returned `409 CONFLICT — "Selected staff is no longer available
+for this time"`, exactly as `createBookingTransactional`'s guard is written.
+No code change made — the guard is doing its job. Test booking cleaned up
+afterward (cancelled via the real API, not deleted directly).
+
+Original repro notes, left for context:
 
 This is surprising because `booking.repository.ts`'s
 `createBookingTransactional` (shared by both `POST /bookings` and
