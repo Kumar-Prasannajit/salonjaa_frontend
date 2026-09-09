@@ -85,11 +85,14 @@ export type PublicService = {
 // Select Services. Bare object, no envelope. `gallery` is always `[]` today
 // (salon_gallery_images doesn't exist yet, per the backend note) — present
 // only so this doesn't need a breaking shape change once that ships.
+// `phone` is new (Module 19) — the branch's own phone column, null if the
+// owner never set one — closes the "Contact"/"Call Salon" gap.
 export type PublicBranchDetail = PublicBranchSummary & {
   description: string | null;
   gallery: string[];
   latitude: number | null;
   longitude: number | null;
+  phone: string | null;
   verificationStatus: string;
   openingTime: string;
   closingTime: string;
@@ -175,6 +178,10 @@ export type Booking = {
   notes: string | null;
   rejectionReason: string | null;
   cancellationReason: string | null;
+  // Module 19 — new alongside the existing freeform cancellationReason,
+  // null unless the cancelling customer picked one of the fixed reasons
+  // (see CancellationReasonCode below).
+  cancellationReasonCode: CancellationReasonCode | null;
   approvedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
@@ -188,7 +195,17 @@ export type Booking = {
   branchName: string | null;
   city: string | null;
   staffName: string | null;
+  // Module 19 — resolved the same way as the Module 11 fields above, same
+  // scoping (read endpoints only, null on mutation-confirmation responses).
+  // Closes the "Call Salon" gap.
+  branchPhone: string | null;
 };
+
+// POST /bookings/:id/cancel's optional reasonCode (Module 19) — a fixed
+// picker mirroring "why are you cancelling?", "OTHER" reveals a freeform
+// `reason` field. Both fields stay optional today per frontend_handover.md
+// ("not yet required — see note below"); don't assume either is mandatory.
+export type CancellationReasonCode = "NEED_HELP" | "TOOK_TOO_LONG_TO_CONFIRM" | "BOOKED_BY_MISTAKE" | "BOOKED_ELSEWHERE" | "OTHER";
 
 // GET /bookings/:id embeds this — the list endpoint above does not.
 export type BookingServiceLine = {

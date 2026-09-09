@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CalendarClock, CheckCircle2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, Phone } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import type { Booking, BookingDetail } from "@/lib/types";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 // of the booking's raw bookingNumber — bookingNumber (still real data, never
 // fabricated) drops to a subtitle for reference, and falls back to being the
 // title only in the unlikely case salonName comes back null.
+// Module 19 — labels for the fixed cancellation reasonCode picker
+// (components/cancel-booking-dialog.tsx), used as a fallback display below
+// when the customer picked a reason but didn't also type freeform text.
+const CANCELLATION_REASON_LABEL: Record<string, string> = {
+  NEED_HELP: "Needed help / had a question",
+  TOOK_TOO_LONG_TO_CONFIRM: "Took too long to confirm",
+  BOOKED_BY_MISTAKE: "Booked by mistake",
+  BOOKED_ELSEWHERE: "Booked elsewhere",
+  OTHER: "Other",
+};
+
 const STATUS_STYLE: Record<Booking["bookingStatus"], { label: string; className: string }> = {
   PENDING: { label: "Pending Approval", className: "text-primary" },
   AWAITING_PAYMENT: { label: "Payment Due", className: "text-primary" },
@@ -60,7 +71,17 @@ export function BookingCard({
             {booking.staffName ? ` • ${booking.staffName}` : ""}
           </p>
         </div>
-        <span className={`text-sm font-medium ${status.className}`}>{status.label}</span>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`text-sm font-medium ${status.className}`}>{status.label}</span>
+          {/* Module 19 — resolved server-side the same way as salonName/branchName/
+              staffName (lib/types.ts's note); null if the owner never set a branch phone. */}
+          {booking.branchPhone && (
+            <a href={`tel:${booking.branchPhone}`} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
+              <Phone className="size-3" />
+              Call Salon
+            </a>
+          )}
+        </div>
       </div>
 
       <div className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
@@ -83,8 +104,13 @@ export function BookingCard({
         </div>
       </div>
 
-      {(booking.cancellationReason || booking.rejectionReason) && (
-        <p className="mt-2 text-xs text-muted-foreground">Reason: {booking.cancellationReason || booking.rejectionReason}</p>
+      {(booking.cancellationReason || booking.cancellationReasonCode || booking.rejectionReason) && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Reason:{" "}
+          {booking.cancellationReason ||
+            (booking.cancellationReasonCode && CANCELLATION_REASON_LABEL[booking.cancellationReasonCode]) ||
+            booking.rejectionReason}
+        </p>
       )}
 
       {booking.bookingStatus === "COMPLETED" && (

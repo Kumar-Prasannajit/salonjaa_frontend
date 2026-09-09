@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BadgeCheck, MapPin, Star, Store } from "lucide-react";
+import { ArrowLeft, BadgeCheck, MapPin, Phone, Star, Store } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import type { PublicBranchDetail } from "@/lib/types";
 import { Card } from "@/components/ui/card";
@@ -48,10 +48,16 @@ export default function SalonDetailsPage() {
 
   return (
     <main className="mx-auto min-h-svh w-full max-w-md bg-background pb-28 md:max-w-2xl">
-      <div className="flex items-center gap-3 px-5 py-3 md:px-10">
+      <div className="flex items-center justify-between gap-3 px-5 py-3 md:px-10">
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border bg-background p-2">
           <ArrowLeft className="size-4" />
         </button>
+        {/* Module 19 — branch's own phone column, null if the owner never set one. */}
+        {branch?.phone && (
+          <a href={`tel:${branch.phone}`} aria-label="Call salon" className="rounded-full border border-border bg-background p-2">
+            <Phone className="size-4" />
+          </a>
+        )}
       </div>
 
       {error && (
@@ -103,6 +109,15 @@ export default function SalonDetailsPage() {
               {branch.addressLine1}, {branch.city}
               {branch.distanceKm != null && ` • ${branch.distanceKm.toFixed(1)} km`}
             </p>
+            {/* Module 19 — GET /public/branches' new salonId filter closes the
+                "View Branches" gap: list this brand's other locations on Explore. */}
+            <button
+              type="button"
+              onClick={() => router.push(`/explore?salonId=${branch.salonId}&salonName=${encodeURIComponent(branch.salonName)}`)}
+              className="mt-1 text-sm font-medium text-primary underline underline-offset-2"
+            >
+              View Other Branches
+            </button>
             <button
               type="button"
               onClick={() => router.push(`/reviews/salon/${branch.salonId}`)}
