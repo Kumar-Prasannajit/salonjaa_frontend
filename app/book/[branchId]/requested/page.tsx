@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Clock } from "lucide-react";
+import { apiFetch } from "@/lib/api-client";
 import { useBookingDraft } from "@/hooks/booking-draft-context";
+import type { BookingDetail } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Stands in for docs/designs/10-booking-confirmed.jpeg, but deliberately not
 // that screen: POST /bookings only ever creates a PENDING booking (see
@@ -14,6 +17,11 @@ import { Button } from "@/components/ui/button";
 // is the honest state: booking requested, awaiting the salon's approval.
 // The real "Booking Confirmed" screen belongs after Module 7's My Bookings
 // gets a "Pay Now" action and Module 6's payment succeeds.
+//
+// Module 16 — POST /bookings' own response has no requiresAdvancePayment/
+// advanceAmount fields (frontend_handover.md: "visible via GET /bookings/:id"
+// only), so a PAY_AT_SALON request fetches the booking detail once landed
+// here to check for it, rather than only surfacing it later in My Bookings.
 export default function BookingRequestedPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,11 +31,26 @@ export default function BookingRequestedPage() {
   const status = searchParams.get("status");
   const paymentMethod = searchParams.get("paymentMethod");
 
+  const [advanceAmount, setAdvanceAmount] = useState<number | null>(null);
+
   // Guard against landing here directly with no booking result — this page
   // only makes sense right after checkout/page.tsx's confirmBooking() redirect.
   useEffect(() => {
     if (!bookingId) router.replace("/book/start");
   }, [bookingId, router]);
+
+  useEffect(() => {
+    if (!bookingId || paymentMethod !== "PAY_AT_SALON") return;
+    apiFetch<{ booking: BookingDetail }>(`/bookings/${bookingId}`)
+      .then(({ booking }) => {
+        if (booking.requiresAdvancePayment) setAdvanceAmount(booking.advanceAmount);
+      })
+      .catch(() => {
+        // Not fatal — the same advance-payment prompt is also surfaced from
+        // My Bookings (components/booking-card.tsx), so a failed check here
+        // just means the customer sees it there instead.
+      });
+  }, [bookingId, paymentMethod]);
 
   if (!bookingId) return null;
 
@@ -39,11 +62,22 @@ export default function BookingRequestedPage() {
         </div>
         <h1 className="mt-4 text-2xl font-bold text-primary">Booking Requested!</h1>
         <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-          {paymentMethod === "PAY_AT_SALON"
+          {advanceAmount !== null
+            ? "The salon can't review this request until your advance payment clears — pay it now to move things along."
+            : paymentMethod === "PAY_AT_SALON"
             ? "The salon will review your request and confirm shortly. You'll pay at the salon — no online payment needed."
             : "The salon will review your request and confirm shortly. You'll be notified, and can then pay from My Bookings."}
         </p>
       </div>
+
+      {advanceAmount !== null && (
+        <Alert className="mt-6">
+          <AlertDescription>
+            This booking needs a ₹{advanceAmount} advance payment before the salon can approve it — the remainder stays payable at the
+            salon as planned.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="mt-6 divide-y divide-border p-0">
         <div className="space-y-1 p-4">
@@ -75,7 +109,19 @@ export default function BookingRequestedPage() {
       </Card>
 
       <div className="mt-8 space-y-3">
-        <Button className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/bookings")}>
+        {advanceAmount !== null && (
+          <Button
+            className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+            onClick={() => router.push(`/bookings/${bookingId}/pay`)}
+          >
+            Pay ₹{advanceAmount} Advance Now
+          </Button>
+        )}
+        <Button
+          className={advanceAmount !== null ? "w-full" : "w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"}
+          variant={advanceAmount !== null ? "outline" : undefined}
+          onClick={() => router.push("/bookings")}
+        >
           View My Bookings
         </Button>
         <Button

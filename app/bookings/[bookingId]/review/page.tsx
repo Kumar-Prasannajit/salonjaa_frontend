@@ -22,6 +22,16 @@ const CATEGORIES: { key: keyof Omit<ReviewRatings, "overallRating">; label: stri
 
 const BLANK: ReviewRatings = { overallRating: 0, serviceRating: 0, staffRating: 0, hygieneRating: 0, ambienceRating: 0, productRating: 0 };
 
+// Module 16 — finalized: edits are only accepted within 48 hours of the
+// review's own createdAt; PATCH /reviews/:reviewId 422s past that. Computed
+// client-side purely to show a locked state upfront instead of letting the
+// customer fill out an edit that's guaranteed to 422 on submit.
+const REVIEW_EDIT_WINDOW_HOURS = 48;
+function isPastReviewEditWindow(createdAt: string) {
+  const hoursSinceCreated = (Date.now() - new Date(createdAt).getTime()) / 3_600_000;
+  return hoursSinceCreated > REVIEW_EDIT_WINDOW_HOURS;
+}
+
 // POST /reviews (create) / PATCH /reviews/:reviewId (edit) — only reachable
 // once a booking is COMPLETED (frontend_handover.md: happens automatically
 // once the scheduled time passes, no separate "mark complete" action).
@@ -129,6 +139,23 @@ export default function ReviewBookingPage() {
           <p className="text-sm text-muted-foreground">Only a completed booking can be reviewed.</p>
           <Button variant="outline" onClick={() => router.push("/bookings")}>
             Back to My Bookings
+          </Button>
+        </Card>
+      </main>
+    );
+  }
+
+  if (existing && isPastReviewEditWindow(existing.createdAt)) {
+    return (
+      <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl">
+        <Card className="flex flex-col items-center gap-3 border-dashed p-10 text-center">
+          <Lock className="size-8 text-accent" />
+          <p className="font-semibold">Edit window closed</p>
+          <p className="text-sm text-muted-foreground">
+            Reviews can only be edited within {REVIEW_EDIT_WINDOW_HOURS} hours of posting — that window has passed for this one.
+          </p>
+          <Button variant="outline" onClick={() => router.push(`/reviews/salon/${booking.salonId}`)}>
+            See Salon Reviews
           </Button>
         </Card>
       </main>

@@ -149,7 +149,10 @@ export type BookingCreateResult = {
 // BOOKING_PAYMENT_WINDOW_MINUTES-minute payment window is running; a
 // PAY_AT_SALON booking never passes through this state (approve goes
 // straight to APPROVED, unchanged). See docs/KNOWN_BACKEND_LIMITATIONS.md.
-export type BookingStatus = "PENDING" | "AWAITING_PAYMENT" | "APPROVED" | "CANCELLED" | "COMPLETED" | "EXPIRED";
+// Module 16 — NO_SHOW added: POST /salon-bookings/:id/no-show moves an
+// APPROVED booking here any time at/after its scheduled start, recording a
+// customer strike automatically.
+export type BookingStatus = "PENDING" | "AWAITING_PAYMENT" | "APPROVED" | "CANCELLED" | "COMPLETED" | "EXPIRED" | "NO_SHOW";
 
 export type Booking = {
   id: string;
@@ -179,6 +182,17 @@ export type Booking = {
   completedAt: string | null;
   cancelledAt: string | null;
   expiredAt: string | null;
+  // Module 16 — set when POST /salon-bookings/:id/no-show fires.
+  noShowAt: string | null;
+  // Module 16 — a customer with 4+ lifetime NO_SHOWs needs a 10%-of-total
+  // advance deposit before the salon can even approve a PAY_AT_SALON
+  // booking (an ONLINE booking never sets this — paying the full amount
+  // upfront already covers it). advanceAmount is null unless
+  // requiresAdvancePayment is true. Pay it via the existing
+  // POST /payments/create-order/POST /payments/verify flow, same as any
+  // other online payment — see app/bookings/[bookingId]/pay/page.tsx.
+  requiresAdvancePayment: boolean;
+  advanceAmount: number | null;
   createdAt: string;
   // Module 11 — resolved server-side on GET /bookings/:id, GET /bookings/my-bookings,
   // and GET /salon-bookings only (not on the mutation-confirmation responses, which

@@ -9,9 +9,11 @@ import type { Booking } from "@/lib/types";
 
 // POST /bookings/:id/cancel — confirmation dialog + reason, per
 // frontend_handover.md's "confirmation dialog, mutation lock" guidance.
-// Cancellation policy is provisional (PROGRESS.md's Module 6 note): any
-// PENDING/APPROVED booking can be cancelled any time before its scheduled
-// start today, no cutoff, no strike — don't promise that's final.
+// Module 16 finalized the cancellation policy (no longer provisional): free
+// up to 2 hours before scheduledStart, blocked entirely inside that window
+// (409, no exceptions/strikes for a late attempt) — the Cancel button
+// itself is disabled client-side before this dialog can even open, see
+// components/booking-card.tsx's isPastCancellationCutoff.
 export function CancelBookingDialog({
   booking,
   busy,

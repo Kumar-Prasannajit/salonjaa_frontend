@@ -211,6 +211,17 @@ export default function CheckoutPage() {
                   Pay at Salon
                 </button>
               </div>
+              {/* Module 16 — can't know upfront whether this specific customer is
+                  restricted (that's server-side strike history), so this only sets
+                  expectations rather than fabricating a definite outcome; the real
+                  answer comes back on the created booking and is acted on from
+                  app/book/[branchId]/requested/page.tsx. */}
+              {paymentMethod === "PAY_AT_SALON" && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  If your account requires it, you&apos;ll be asked to pay a small advance right after this request is sent, before the
+                  salon can review it.
+                </p>
+              )}
             </Card>
 
             <Card className="p-4">

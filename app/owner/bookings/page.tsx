@@ -90,6 +90,23 @@ export default function OwnerBookingsPage() {
     }
   };
 
+  // Module 16 — POST /salon-bookings/:id/no-show, {} body. Records a
+  // customer strike automatically; window.confirm rather than a dialog,
+  // same simple-destructive-confirm pattern as service-manager.tsx's remove().
+  const markNoShow = async (booking: Booking) => {
+    if (!window.confirm(`Mark ${booking.bookingNumber} as a no-show? This records a strike against the customer.`)) return;
+    setBusyId(booking.id);
+    try {
+      await apiFetch(`/salon-bookings/${booking.id}/no-show`, { method: "POST", body: JSON.stringify({}) });
+      toast.success("Booking marked as no-show.");
+      await load(tab);
+    } catch (e) {
+      toast.error(messageFromError(e));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <main>
       <div className="flex items-center justify-between">
@@ -137,7 +154,7 @@ export default function OwnerBookingsPage() {
         )}
 
         {bookings?.map((b) => (
-          <SalonBookingCard key={b.id} booking={b} busy={busyId === b.id} onApprove={setApproveTarget} onReject={setRejectTarget} />
+          <SalonBookingCard key={b.id} booking={b} busy={busyId === b.id} onApprove={setApproveTarget} onReject={setRejectTarget} onNoShow={markNoShow} />
         ))}
       </div>
 
