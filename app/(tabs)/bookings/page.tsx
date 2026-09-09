@@ -130,7 +130,13 @@ export default function BookingsPage() {
 
   return (
     <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
-      <h1 className="text-lg font-semibold md:text-2xl">My Bookings</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-lg font-semibold md:text-2xl">My Bookings</h1>
+        {/* Module 23 — POST /bookings/claim, also reachable from Profile. */}
+        <button type="button" onClick={() => router.push("/bookings/claim")} className="text-sm font-medium text-primary underline-offset-2 hover:underline">
+          Claim a Walk-in
+        </button>
+      </div>
 
       <div className="mt-4 flex gap-2">
         {TABS.map((t) => (
