@@ -8,6 +8,7 @@ import type { Branch } from "@/lib/types";
 import { BranchInfoCard } from "@/components/owner/branch-info-card";
 import { BranchHolidaysCard } from "@/components/owner/branch-holidays-card";
 import { BranchCapacityCard } from "@/components/owner/branch-capacity-card";
+import { BranchSlotTemplatesCard } from "@/components/owner/branch-slot-templates-card";
 import { StaffManager } from "@/components/owner/staff-manager";
 import { ServiceManager } from "@/components/owner/service-manager";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,6 +65,7 @@ export default function OwnerBranchDetailPage() {
           <BranchInfoCard branch={branch} onUpdated={setBranch} />
           <BranchHolidaysCard branchId={branch.id} />
           <BranchCapacityCard branchId={branch.id} />
+          <BranchSlotTemplatesCard branchId={branch.id} />
           <StaffManager branchId={branch.id} />
           <ServiceManager branchId={branch.id} />
         </div>

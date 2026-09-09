@@ -4,6 +4,7 @@ import { DashboardNav } from "@/components/dashboard-nav";
 const NAV_ITEMS = [
   { href: "/owner/salons", label: "Salons" },
   { href: "/owner/bookings", label: "Bookings" },
+  { href: "/owner/promotions", label: "Promotions" },
 ];
 
 // Gated on SALON_OWNER (see components/role-guard.tsx). No design exists for

@@ -6,6 +6,8 @@ import { ArrowLeft, MapPinned, Plus, Trash2 } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import { useToastContext } from "@/hooks/toast-context";
 import type { Branch, Salon } from "@/lib/types";
+import { SalonGalleryCard } from "@/components/owner/salon-gallery-card";
+import { SalonAnalyticsCard } from "@/components/owner/salon-analytics-card";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -211,6 +213,9 @@ export default function OwnerSalonDetailPage() {
               ))}
             </div>
           </div>
+
+          <SalonAnalyticsCard salonId={salonId} />
+          <SalonGalleryCard salonId={salonId} />
 
           <Button variant="ghost" className="w-full gap-1.5 text-destructive hover:text-destructive" disabled={deleting} onClick={removeSalon}>
             <Trash2 className="size-4" />

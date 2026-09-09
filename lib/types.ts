@@ -294,6 +294,24 @@ export type BranchHoliday = { id: string; date: string; reason: string | null };
 
 export type BranchCapacityRule = { branchId: string; maxCapacityOverride: number | null };
 
+// GET/POST /branches/:id/slot-templates, PATCH/DELETE .../slot-templates/:templateId
+// (Module 17) — TRD §4's exact column shape. A branch with zero *active*
+// templates keeps the old fixed-30-minute-interval slot generation
+// unchanged; adding one or more switches that branch over to per-template
+// generation (its own start/end bounds the walk, its own slotDurationMinutes
+// is the step). `active` is the only field PATCH-able beyond the create
+// fields, per frontend_handover.md's create body — used to pause a template
+// without deleting it.
+export type SlotTemplate = {
+  id: string;
+  branchId: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  slotDurationMinutes: number;
+  active: boolean;
+};
+
 // staffType has exactly two values on the backend (staff.validator.ts's zod enum) —
 // frontend_handover.md's own example body only shows "NORMAL", not the full set.
 export type Staff = {
@@ -319,6 +337,46 @@ export type StaffLeave = {
   endDateTime: string;
   reason: string | null;
   status: string;
+};
+
+// GET/POST /salons/:salonId/gallery, DELETE .../gallery/:imageId (Module
+// 17) — same "URL string, frontend hosts the file elsewhere" precedent as
+// salons.logo/coverImage, no upload endpoint. Backs GET
+// /public/branches/:branchId's previously-always-`[]` `gallery` field.
+export type SalonGalleryImage = { id: string; imageUrl: string; displayOrder: number | null };
+
+// GET/POST /promotions, PATCH/DELETE /promotions/:id (Module 17, owner) —
+// frontend_handover.md only documents the create/update body, not a
+// list/get response shape, so `id`/`active`/timestamp fields here are the
+// same-convention best guess this codebase makes elsewhere (e.g. admin
+// coupons' `active` flag) rather than something observed against a live
+// call — flag and correct if the real response differs.
+export type Promotion = {
+  id: string;
+  title: string;
+  description: string | null;
+  bannerImageUrl: string | null;
+  startsAt: string;
+  endsAt: string;
+  branchIds: string[];
+  serviceIds: string[];
+  featured: boolean;
+  active: boolean;
+};
+
+// GET /salons/:salonId/analytics?from&to (Module 17, owner-scoped) — same
+// deliberately-minimal, no-charts philosophy as Admin's reports overview.
+// averageRating/reviewCount are live (not date-ranged); everything else is
+// scoped to the from/to query.
+export type SalonAnalytics = {
+  totalBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  noShowBookings: number;
+  totalRevenue: number;
+  averageRating: number | null;
+  reviewCount: number;
+  topServices: { serviceId: string; serviceName: string; bookingCount: number }[];
 };
 
 // GET/POST /services — named OwnerService (not Service) to avoid colliding
