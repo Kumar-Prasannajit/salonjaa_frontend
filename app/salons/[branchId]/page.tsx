@@ -149,7 +149,8 @@ export default function SalonDetailsPage() {
                   <div className="flex-1">
                     <p className="font-medium">{s.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {s.durationMinutes} min • ₹{s.basePrice}
+                      {s.durationMinutes} min •{" "}
+                      {s.variants.length > 0 ? `From ₹${Math.min(...s.variants.map((v) => v.price))}` : `₹${s.basePrice}`}
                     </p>
                   </div>
                 </Card>

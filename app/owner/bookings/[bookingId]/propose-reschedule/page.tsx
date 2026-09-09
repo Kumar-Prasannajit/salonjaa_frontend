@@ -99,6 +99,7 @@ export default function ProposeRescheduleBookingPage() {
             {booking.services.map((s) => (
               <p key={s.serviceId} className="text-muted-foreground">
                 {s.serviceName}
+                {s.variantName ? ` — ${s.variantName}` : ""}
               </p>
             ))}
           </Card>

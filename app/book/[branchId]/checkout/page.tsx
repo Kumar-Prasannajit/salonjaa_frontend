@@ -65,7 +65,7 @@ export default function CheckoutPage() {
 
   if (!draft.services.length || !draft.slotId) return null;
 
-  const subtotal = draft.services.reduce((sum, s) => sum + s.basePrice, 0);
+  const subtotal = draft.services.reduce((sum, s) => sum + s.price, 0);
   const step = !isAuthenticated || !user ? "auth" : !user.name ? "details" : "summary";
 
   const applyCoupon = async () => {
@@ -99,7 +99,11 @@ export default function CheckoutPage() {
       const body: Record<string, unknown> = {
         salonId: draft.salonId,
         branchId,
-        services: draft.services.map((s) => s.id),
+        // Module 22 — bare serviceId when no variant was chosen (still valid
+        // for a no-variant service), {serviceId, variantId} otherwise. Select
+        // Services never lets a variant-required service into the draft
+        // without a variantId, so this can't send an incomplete entry.
+        services: draft.services.map((s) => (s.variantId ? { serviceId: s.id, variantId: s.variantId } : s.id)),
         bookingDate: draft.date,
         slotId: draft.slotId,
         paymentMethod,
@@ -168,8 +172,11 @@ export default function CheckoutPage() {
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Booking Summary</p>
                 {draft.services.map((s) => (
                   <div key={s.id} className="flex justify-between text-sm">
-                    <span>{s.name}</span>
-                    <span>₹{s.basePrice}</span>
+                    <span>
+                      {s.name}
+                      {s.variantName && <span className="text-muted-foreground"> — {s.variantName}</span>}
+                    </span>
+                    <span>₹{s.price}</span>
                   </div>
                 ))}
                 <div className="flex justify-between text-sm">

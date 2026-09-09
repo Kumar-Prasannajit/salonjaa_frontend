@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import { toISODate } from "@/lib/utils";
-import type { AvailableSlot, Branch, OwnerService, Staff } from "@/lib/types";
+import type { AvailableSlot, Branch, OwnerService, ServiceVariant, Staff } from "@/lib/types";
 import { useToastContext } from "@/hooks/toast-context";
 import { SlotPicker } from "@/components/slot-picker";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 // required (it's the only field that resolves branchId/salonId server-side,
 // per PROGRESS.md's Module 6 note) and the booking is created straight to
 // APPROVED. Mirrors the customer's services→stylist→slot ordering in one page.
+//
+// Module 22 — GET /services?branchId= (OwnerService) doesn't embed
+// variants (unlike the public branch-detail response) — there's no bulk
+// endpoint on the owner side, so variants are fetched one
+// GET /services/:id/variants call per service once the branch's service
+// list loads. A service with active variants requires picking one, same
+// expand-to-choose pattern as app/salons/[branchId]/services/page.tsx.
+type Selection = { variantId: string | null; variantName: string | null };
+
 export default function WalkInBookingPage() {
   const router = useRouter();
   const toast = useToastContext();
@@ -28,8 +37,10 @@ export default function WalkInBookingPage() {
   const [branchId, setBranchId] = useState("");
   const [staff, setStaff] = useState<Staff[]>([]);
   const [services, setServices] = useState<OwnerService[]>([]);
+  const [variantsByService, setVariantsByService] = useState<Map<string, ServiceVariant[]>>(new Map());
   const [staffId, setStaffId] = useState("");
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [selections, setSelections] = useState<Map<string, Selection>>(new Map());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
 
@@ -48,20 +59,54 @@ export default function WalkInBookingPage() {
   useEffect(() => {
     setStaff([]);
     setServices([]);
+    setVariantsByService(new Map());
     setStaffId("");
-    setSelectedServiceIds([]);
+    setSelections(new Map());
+    setExpandedId(null);
     if (!branchId) return;
     setBranchDataError("");
     Promise.all([apiFetch<{ data: Staff[] }>(`/staff?branchId=${branchId}`), apiFetch<{ data: OwnerService[] }>(`/services?branchId=${branchId}`)])
       .then(([staffResult, serviceResult]) => {
         setStaff(staffResult.data);
         setServices(serviceResult.data);
+        return Promise.all(
+          serviceResult.data.map((s) =>
+            apiFetch<{ data: (ServiceVariant & { status: string })[] }>(`/services/${s.id}/variants`).then(
+              (r) => [s.id, r.data.filter((v) => v.status === "ACTIVE")] as const
+            )
+          )
+        );
       })
+      .then((entries) => setVariantsByService(new Map(entries)))
       .catch((e) => setBranchDataError(messageFromError(e)));
   }, [branchId]);
 
-  const toggleService = (id: string) => {
-    setSelectedServiceIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const selectedServiceIds = Array.from(selections.keys());
+
+  // A no-variant service just toggles on/off, same as before.
+  const togglePlain = (id: string) =>
+    setSelections((prev) => {
+      const next = new Map(prev);
+      if (next.has(id)) next.delete(id);
+      else next.set(id, { variantId: null, variantName: null });
+      return next;
+    });
+
+  // Tapping the same variant again deselects the service; tapping a
+  // different one switches to it — the only path that can add a
+  // variant-required service to the selection.
+  const chooseVariant = (serviceId: string, v: ServiceVariant) =>
+    setSelections((prev) => {
+      const next = new Map(prev);
+      if (next.get(serviceId)?.variantId === v.id) next.delete(serviceId);
+      else next.set(serviceId, { variantId: v.id, variantName: v.name });
+      return next;
+    });
+
+  const onServiceClick = (s: OwnerService) => {
+    const variants = variantsByService.get(s.id) ?? [];
+    if (variants.length === 0) togglePlain(s.id);
+    else setExpandedId((prev) => (prev === s.id ? null : s.id));
   };
 
   const readyForSlots = !!branchId && !!staffId && selectedServiceIds.length > 0 && customerName.trim() && customerPhone.trim();
@@ -75,7 +120,14 @@ export default function WalkInBookingPage() {
         body: JSON.stringify({
           customerName: customerName.trim(),
           customerPhone: customerPhone.trim(),
-          services: selectedServiceIds,
+          // Module 22 — bare serviceId when no variant was chosen (still
+          // valid for a no-variant service), {serviceId, variantId}
+          // otherwise. A variant-required service can't reach `selections`
+          // without a variantId — see onServiceClick/chooseVariant above.
+          services: selectedServiceIds.map((id) => {
+            const sel = selections.get(id)!;
+            return sel.variantId ? { serviceId: id, variantId: sel.variantId } : id;
+          }),
           staffId,
           bookingDate: toISODate(date),
           slotId: slot.slotId,
@@ -167,18 +219,46 @@ export default function WalkInBookingPage() {
                     <p className="text-sm text-muted-foreground">No services on this branch yet.</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {services.map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => toggleService(s.id)}
-                          className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                            selectedServiceIds.includes(s.id) ? "border-primary bg-primary text-primary-foreground" : "border-border"
-                          }`}
-                        >
-                          {s.name}
-                        </button>
-                      ))}
+                      {services.map((s) => {
+                        const variants = variantsByService.get(s.id) ?? [];
+                        const sel = selections.get(s.id);
+                        const isSelected = !!sel;
+                        const isExpanded = expandedId === s.id;
+                        return (
+                          <div key={s.id} className="space-y-1.5">
+                            <button
+                              type="button"
+                              onClick={() => onServiceClick(s)}
+                              className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                                isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                              }`}
+                            >
+                              {s.name}
+                              {isSelected && sel.variantName ? ` — ${sel.variantName}` : ""}
+                              {!isSelected && variants.length > 0 ? " ▾" : ""}
+                            </button>
+                            {variants.length > 0 && isExpanded && (
+                              <div className="flex flex-wrap gap-1.5 pl-2">
+                                {variants.map((v) => {
+                                  const active = sel?.variantId === v.id;
+                                  return (
+                                    <button
+                                      key={v.id}
+                                      type="button"
+                                      onClick={() => chooseVariant(s.id, v)}
+                                      className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                                        active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                                      }`}
+                                    >
+                                      {v.name} • ₹{v.price}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

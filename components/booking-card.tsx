@@ -67,7 +67,10 @@ export function BookingCard({
         {detail ? (
           detail.services.map((s) => (
             <div key={s.serviceId} className="flex justify-between">
-              <span>{s.serviceName}</span>
+              <span>
+                {s.serviceName}
+                {s.variantName && <span className="text-muted-foreground"> — {s.variantName}</span>}
+              </span>
               <span className="text-muted-foreground">₹{s.price}</span>
             </div>
           ))

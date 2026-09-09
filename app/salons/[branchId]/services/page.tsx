@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Calendar, Check, Plus, Store } from "lucide-react";
+import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, Plus, Store } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import type { PublicBranchDetail, PublicService } from "@/lib/types";
-import { useBookingDraft } from "@/hooks/booking-draft-context";
+import { useBookingDraft, type DraftService } from "@/hooks/booking-draft-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +19,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // from this branch's own services (not a second GET /service-categories
 // call) so it's never showing a category this branch doesn't actually
 // offer.
+//
+// Module 22 — a service with a non-empty `variants[]` can't be selected
+// directly: tapping it only expands a row of variant options (no design
+// mockup exists for this, since variants postdate the design set), and
+// picking one is what actually adds {id, variantId, variantName, price} to
+// the selection. A variant-required service that's merely expanded but has
+// no variant chosen yet stays out of `selections` entirely — there's no
+// half-selected state that could reach "Next".
+type Selection = { variantId: string | null; variantName: string | null; price: number };
+
 export default function SelectServicesPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const router = useRouter();
@@ -28,7 +38,8 @@ export default function SelectServicesPage() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState("");
   const [category, setCategory] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selections, setSelections] = useState<Map<string, Selection>>(new Map());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,24 +67,45 @@ export default function SelectServicesPage() {
     return category ? all.filter((s) => s.categoryId === category) : all;
   }, [branch, category]);
 
-  const selected: PublicService[] = useMemo(() => (branch?.services ?? []).filter((s) => selectedIds.has(s.id)), [branch, selectedIds]);
-  const total = selected.reduce((sum, s) => sum + s.basePrice, 0);
+  const selected: DraftService[] = useMemo(() => {
+    const all = branch?.services ?? [];
+    return all
+      .filter((s) => selections.has(s.id))
+      .map((s) => {
+        const sel = selections.get(s.id)!;
+        return { id: s.id, name: s.name, durationMinutes: s.durationMinutes, basePrice: s.basePrice, variantId: sel.variantId, variantName: sel.variantName, price: sel.price };
+      });
+  }, [branch, selections]);
+  const total = selected.reduce((sum, s) => sum + s.price, 0);
 
-  const toggle = (id: string) =>
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  // A no-variant service just toggles on/off at its basePrice, same as before.
+  const togglePlain = (s: PublicService) =>
+    setSelections((prev) => {
+      const next = new Map(prev);
+      if (next.has(s.id)) next.delete(s.id);
+      else next.set(s.id, { variantId: null, variantName: null, price: s.basePrice });
       return next;
     });
 
+  // Tapping the same variant again deselects the service entirely; tapping a
+  // different one switches to it. This is the only path that can add a
+  // variant-required service to the selection.
+  const chooseVariant = (s: PublicService, v: PublicService["variants"][number]) =>
+    setSelections((prev) => {
+      const next = new Map(prev);
+      if (next.get(s.id)?.variantId === v.id) next.delete(s.id);
+      else next.set(s.id, { variantId: v.id, variantName: v.name, price: v.price });
+      return next;
+    });
+
+  const onCardClick = (s: PublicService) => {
+    if (s.variants.length === 0) togglePlain(s);
+    else setExpandedId((prev) => (prev === s.id ? null : s.id));
+  };
+
   const next = () => {
     if (!branch || selected.length === 0) return;
-    setServices(
-      branch.branchId,
-      branch.salonId,
-      selected.map((s) => ({ id: s.id, name: s.name, durationMinutes: s.durationMinutes, basePrice: s.basePrice }))
-    );
+    setServices(branch.branchId, branch.salonId, selected);
     router.push(`/book/${branch.branchId}/stylist`);
   };
 
@@ -140,30 +172,67 @@ export default function SelectServicesPage() {
           <div className="mt-4 space-y-3">
             {visibleServices.length === 0 && <p className="text-sm text-muted-foreground">No services in this category.</p>}
             {visibleServices.map((s) => {
-              const isSelected = selectedIds.has(s.id);
+              const hasVariants = s.variants.length > 0;
+              const sel = selections.get(s.id);
+              const isSelected = !!sel;
+              const isExpanded = expandedId === s.id;
+              const displayPrice = hasVariants ? (sel ? sel.price : Math.min(...s.variants.map((v) => v.price))) : s.basePrice;
               return (
-                <Card key={s.id} onClick={() => toggle(s.id)} className="cursor-pointer flex-row items-center gap-3 p-3">
-                  {s.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- remote, salon-owner-supplied URL.
-                    <img src={s.imageUrl} alt="" className="size-14 shrink-0 rounded-lg object-cover" />
-                  ) : (
-                    <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-secondary">
-                      <Store className="size-5 text-muted-foreground" />
+                <Card key={s.id} onClick={() => onCardClick(s)} className="cursor-pointer flex-col gap-0 p-3">
+                  <div className="flex items-center gap-3">
+                    {s.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- remote, salon-owner-supplied URL.
+                      <img src={s.imageUrl} alt="" className="size-14 shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-secondary">
+                        <Store className="size-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium">{s.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {s.durationMinutes} min • {hasVariants && !sel ? "From " : ""}₹{displayPrice}
+                      </p>
+                      {isSelected && sel.variantName && <p className="text-xs text-primary">{sel.variantName}</p>}
+                    </div>
+                    <div
+                      className={`grid size-8 shrink-0 place-items-center rounded-full ${
+                        isSelected ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border"
+                      }`}
+                    >
+                      {isSelected ? (
+                        <Check className="size-4" />
+                      ) : hasVariants ? (
+                        isExpanded ? (
+                          <ChevronUp className="size-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="size-4 text-muted-foreground" />
+                        )
+                      ) : (
+                        <Plus className="size-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+
+                  {hasVariants && isExpanded && (
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3" onClick={(e) => e.stopPropagation()}>
+                      {s.variants.map((v) => {
+                        const active = sel?.variantId === v.id;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => chooseVariant(s, v)}
+                            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                              active ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                            }`}
+                          >
+                            {v.name} • ₹{v.price}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
-                  <div className="flex-1">
-                    <p className="font-medium">{s.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {s.durationMinutes} min • ₹{s.basePrice}
-                    </p>
-                  </div>
-                  <div
-                    className={`grid size-8 shrink-0 place-items-center rounded-full ${
-                      isSelected ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border"
-                    }`}
-                  >
-                    {isSelected ? <Check className="size-4" /> : <Plus className="size-4 text-muted-foreground" />}
-                  </div>
                 </Card>
               );
             })}
