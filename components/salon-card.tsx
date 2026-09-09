@@ -2,16 +2,19 @@
 
 import { MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Star, Store } from "lucide-react";
+import { BadgePercent, MapPin, Star, Store } from "lucide-react";
 import type { PublicBranchSummary } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 // One GET /public/branches row (docs/designs/02 "Popular Near You" and
-// docs/designs/04 "Nearby Salons"). No discount badge, no heart/favourite
-// icon — both explicitly out of scope per
-// docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md (no source of truth for either),
-// omitted rather than faked. `distanceKm` only renders when the caller
+// docs/designs/04 "Nearby Salons"). Still no heart/favourite icon — no
+// source of truth for it anywhere (docs/PROPOSED_PUBLIC_BROWSE_CONTRACT.md's
+// call, unchanged). The design's flat "20% OFF" badge is no longer a pure
+// omission though: Module 21 backs a real (if different-shaped) signal set
+// — priceTier/genderServed/activePromotion, rendered below rather than a
+// fabricated discount percentage. `distanceKm` only renders when the caller
 // actually supplied lat/lng (see hooks/use-geolocation.ts) — never guessed.
 function CoverImage({ branch, className }: { branch: PublicBranchSummary; className: string }) {
   return branch.coverImage ? (
@@ -38,6 +41,35 @@ function RatingLine({ branch }: { branch: PublicBranchSummary }) {
   );
 }
 
+// Module 21's three listing-card signals as one compact badge row.
+// genderServed's default (`UNISEX`) is the unmarked common case, same
+// pattern as distanceKm/averageRating being omitted rather than shown as a
+// zero/default value — only MEN/WOMEN get a badge, calling out an actually
+// targeted audience.
+function SignalBadges({ branch }: { branch: PublicBranchSummary }) {
+  if (branch.priceTier === null && branch.genderServed === "UNISEX" && !branch.activePromotion) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {branch.priceTier && (
+        <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+          {branch.priceTier}
+        </Badge>
+      )}
+      {branch.genderServed !== "UNISEX" && (
+        <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+          {branch.genderServed === "MEN" ? "Men only" : "Women only"}
+        </Badge>
+      )}
+      {branch.activePromotion && (
+        <Badge className="gap-1 bg-gradient-to-r from-gold to-gold-bright px-1.5 py-0 text-[10px] text-primary-foreground">
+          <BadgePercent className="size-3" />
+          <span className="max-w-24 truncate">{branch.activePromotion.title}</span>
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; variant: "grid" | "row" }) {
   const router = useRouter();
   const title = branch.branchName && branch.branchName !== branch.salonName ? `${branch.salonName} · ${branch.branchName}` : branch.salonName;
@@ -51,7 +83,7 @@ export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; va
     return (
       <Card onClick={goToDetails} className="cursor-pointer flex-row items-center gap-3 p-3">
         <CoverImage branch={branch} className="size-20 shrink-0 rounded-lg" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <p className="truncate font-semibold">{title}</p>
           <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
             <MapPin className="size-3 shrink-0" />
@@ -59,6 +91,7 @@ export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; va
             {branch.distanceKm != null && `, ${branch.distanceKm.toFixed(1)} km`}
           </p>
           <RatingLine branch={branch} />
+          <SignalBadges branch={branch} />
         </div>
         <Button size="sm" className="shrink-0 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={goToServices}>
           Book
@@ -77,6 +110,7 @@ export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; va
           {branch.distanceKm != null && `, ${branch.distanceKm.toFixed(1)} km`}
         </p>
         <RatingLine branch={branch} />
+        <SignalBadges branch={branch} />
       </div>
     </Card>
   );
