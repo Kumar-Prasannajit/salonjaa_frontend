@@ -75,6 +75,7 @@ export default function PayBookingPage() {
           ondismiss: () => {
             setDismissedNotice(true);
             toast.warning("Payment window closed before completing.");
+            void cancelDismissedOrder(order.orderId);
           },
         },
       });
@@ -87,6 +88,23 @@ export default function PayBookingPage() {
       toast.error(msg);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // POST /payments/create-order only returns { orderId, amount, currency } (no paymentId,
+  // per frontend_handover.md), so the ondismiss handler can't call POST /payments/:paymentId/cancel
+  // directly — it has to resolve the paymentId itself first via GET /payments/my-payments,
+  // matching on providerOrderId. Runs best-effort: if this fails, the payment.expire backstop
+  // job still cleans it up within PAYMENT_ORDER_EXPIRY_MINUTES, so no user-facing error here.
+  const cancelDismissedOrder = async (orderId: string) => {
+    try {
+      const { data } = await apiFetch<{ data: Payment[] }>("/payments/my-payments");
+      const pending = data.find((p) => p.providerOrderId === orderId && p.status === "PENDING");
+      if (!pending) return;
+      await apiFetch(`/payments/${pending.id}/cancel`, { method: "POST" });
+    } catch {
+      // 404 (already gone) or 409 (already resolved by /verify landing first) are both fine —
+      // and any other failure just means the automatic expiry backstop handles it instead.
     }
   };
 
