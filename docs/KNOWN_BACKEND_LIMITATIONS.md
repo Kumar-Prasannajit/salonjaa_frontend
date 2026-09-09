@@ -89,6 +89,34 @@ before the window lapses; and handling the case where a booking silently
 becomes `CANCELLED` because the window expired while the customer was
 looking elsewhere.
 
+## No endpoint to fetch a booking's pending reschedule request
+
+Found while building Module 15's customer-response-to-a-salon-proposed-
+reschedule feature (`components/respond-to-reschedule-dialog.tsx`).
+`POST /bookings/:id/reschedule-request` and `POST /salon-bookings/:id/propose-reschedule`
+both create a `booking_reschedule_requests` row and return it directly to
+the proposer (`RescheduleRequestDTO`), but there's no `GET` anywhere to read
+it back later — not on `BookingDTO` (checked directly against the backend's
+own `booking.types.ts`, not just `frontend_handover.md`), not as a separate
+route. That's fine for the proposer, who already has the response from
+their own create call, but the *responder* — a different person, on a
+different device/session — has no way to discover that a request even
+exists, let alone what it proposes, before calling
+`POST /bookings/:id/approve-reschedule`/`reject-reschedule`.
+
+This is a structurally worse version of the "no GET, so this component only
+lists what it created this session" gap `BranchHolidaysCard`/`ServiceManager`
+already carry — those work around it by having the *same* actor create and
+view; here the creator and responder are never the same person, so there's
+no session-local list to fall back on. `RespondToRescheduleDialog` is
+honest about this rather than faking a preview: it offers Accept/Decline
+unconditionally on any upcoming booking and points the responder at the
+email notification they were sent for what's actually being proposed;
+calling either action with nothing pending 404s with a clear message ("No
+pending reschedule request for this booking"), shown as-is. A real fix
+needs either `BookingDTO` to carry the latest pending request's fields, or
+a dedicated `GET /bookings/:id/reschedule-request` route.
+
 ## ~~Walk-in booking created despite an existing overlapping booking for the same staff~~ — Investigated, not a backend bug
 
 Manually reproduced: booked a slot as a customer with a specific stylist

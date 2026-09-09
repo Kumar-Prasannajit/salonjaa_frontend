@@ -24,11 +24,17 @@ export function SalonBookingCard({
   booking,
   onApprove,
   onReject,
+  onRespondToReschedule,
   busy,
 }: {
   booking: Booking;
   onApprove: (b: Booking) => void;
   onReject: (b: Booking) => void;
+  // Module 15 — opens components/respond-to-reschedule-dialog.tsx. Shown
+  // unconditionally alongside Propose Reschedule rather than only when one
+  // is known to be pending, since there's no endpoint to discover that
+  // first — see that dialog's own note.
+  onRespondToReschedule: (b: Booking) => void;
   busy: boolean;
 }) {
   const router = useRouter();
@@ -91,6 +97,16 @@ export function SalonBookingCard({
             </Button>
           )}
         </div>
+      )}
+
+      {canReschedule && (
+        <button
+          type="button"
+          onClick={() => onRespondToReschedule(booking)}
+          className="mt-2 w-full text-center text-xs text-muted-foreground underline underline-offset-2"
+        >
+          Respond to a reschedule request
+        </button>
       )}
     </Card>
   );
