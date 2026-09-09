@@ -39,9 +39,13 @@ export default function BookingRequestedPage() {
         </div>
         <h1 className="mt-4 text-2xl font-bold text-primary">Booking Requested!</h1>
         <p className="mt-2 max-w-xs text-sm text-muted-foreground">
-          {paymentMethod === "PAY_AT_SALON"
-            ? "The salon will review your request and confirm shortly. You'll pay at the salon — no online payment needed."
-            : "The salon will review your request and confirm shortly. You'll be notified, and can then pay from My Bookings."}
+          {paymentMethod === "PAY_AT_SALON" &&
+            "The salon will review your request and confirm shortly. You'll pay at the salon — no online payment needed."}
+          {paymentMethod === "WALLET" &&
+            "The salon will review your request and confirm shortly. Your wallet has already been charged in full — if this booking doesn't go through, the amount is refunded back to your wallet automatically."}
+          {paymentMethod !== "PAY_AT_SALON" &&
+            paymentMethod !== "WALLET" &&
+            "The salon will review your request and confirm shortly. You'll be notified, and can then pay from My Bookings."}
         </p>
       </div>
 

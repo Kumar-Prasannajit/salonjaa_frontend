@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, BadgePercent, Check } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
-import type { BookingCreateResult, CouponValidation } from "@/lib/types";
+import type { BookingCreateResult, CouponValidation, Wallet } from "@/lib/types";
 import { useBookingDraft } from "@/hooks/booking-draft-context";
 import { useAccountContext } from "@/hooks/account-context";
 import { useToastContext } from "@/hooks/toast-context";
@@ -32,7 +32,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // 3. A payment-method choice (Module 14b, no design mockup exists for it)
 //    lets the customer pick PAY_AT_SALON instead of the ONLINE default — that
 //    booking skips the AWAITING_PAYMENT/online-payment step entirely and
-//    goes straight to APPROVED once the salon approves it.
+//    goes straight to APPROVED once the salon approves it. Module 20 adds a
+//    third option, WALLET — debits the full total immediately at creation
+//    time (422, no booking created, if the balance is short), so the
+//    wallet balance is fetched once authenticated to disable it upfront
+//    rather than let the customer hit that 422 blind.
 //
 // The coupon-validate call is real and live, but its result is *informational
 // only*: no documented endpoint anywhere attaches a coupon to a booking (POST
@@ -49,7 +53,8 @@ export default function CheckoutPage() {
   const { isAuthenticated, user } = account;
   const toast = useToastContext();
 
-  const [paymentMethod, setPaymentMethod] = useState<"ONLINE" | "PAY_AT_SALON">("ONLINE");
+  const [paymentMethod, setPaymentMethod] = useState<"ONLINE" | "PAY_AT_SALON" | "WALLET">("ONLINE");
+  const [wallet, setWallet] = useState<Wallet | null>(null);
 
   const [couponCode, setCouponCode] = useState("");
   const [couponResult, setCouponResult] = useState<CouponValidation | null>(null);
@@ -63,10 +68,25 @@ export default function CheckoutPage() {
     if (!draft.services.length || draft.branchId !== branchId || !draft.slotId) router.replace("/book/start");
   }, [draft.services.length, draft.branchId, branchId, draft.slotId, router]);
 
+  // Module 20 — GET /wallet, fetched once the customer has both an account
+  // and a name on file (the last gate before the "summary" step below) so
+  // this disables the WALLET option upfront instead of letting the customer
+  // hit POST /bookings' 422 blind.
+  useEffect(() => {
+    if (!isAuthenticated || !user?.name) return;
+    apiFetch<Wallet>("/wallet")
+      .then(setWallet)
+      .catch(() => {
+        // A failed fetch just leaves the WALLET option disabled below
+        // (walletInsufficient defaults true when wallet is null).
+      });
+  }, [isAuthenticated, user?.name]);
+
   if (!draft.services.length || !draft.slotId) return null;
 
   const subtotal = draft.services.reduce((sum, s) => sum + s.basePrice, 0);
   const step = !isAuthenticated || !user ? "auth" : !user.name ? "details" : "summary";
+  const walletInsufficient = !wallet || wallet.balance < subtotal;
 
   const applyCoupon = async () => {
     setCouponError("");
@@ -191,7 +211,7 @@ export default function CheckoutPage() {
 
             <Card className="p-4">
               <p className="text-sm font-medium">Payment Method</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="mt-2 grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("ONLINE")}
@@ -210,7 +230,27 @@ export default function CheckoutPage() {
                 >
                   Pay at Salon
                 </button>
+                <button
+                  type="button"
+                  disabled={walletInsufficient}
+                  onClick={() => setPaymentMethod("WALLET")}
+                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                    paymentMethod === "WALLET" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                  }`}
+                >
+                  Wallet
+                </button>
               </div>
+              {/* Module 20 — GET /wallet, fetched once authenticated so this
+                  disables upfront instead of letting the customer hit
+                  POST /bookings' 422 blind. */}
+              <p className="mt-2 text-xs text-muted-foreground">
+                {wallet
+                  ? walletInsufficient
+                    ? `Wallet balance ₹${wallet.balance} — not enough to cover this booking.`
+                    : `Wallet balance: ₹${wallet.balance}`
+                  : "Checking wallet balance…"}
+              </p>
             </Card>
 
             <Card className="p-4">
@@ -258,9 +298,11 @@ export default function CheckoutPage() {
               {bookingBusy ? "Sending request…" : "Confirm Booking Request"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              {paymentMethod === "ONLINE"
-                ? "This reserves your slot and sends the salon your request — once approved, you'll have a short window to pay online."
-                : "This reserves your slot and sends the salon your request — you'll pay at the salon once approved."}
+              {paymentMethod === "ONLINE" &&
+                "This reserves your slot and sends the salon your request — once approved, you'll have a short window to pay online."}
+              {paymentMethod === "PAY_AT_SALON" && "This reserves your slot and sends the salon your request — you'll pay at the salon once approved."}
+              {paymentMethod === "WALLET" &&
+                "This charges your wallet balance in full right now and sends the salon your request. If the booking is cancelled, rejected, or expires, the full amount is refunded back to your wallet automatically."}
             </p>
           </>
         )}

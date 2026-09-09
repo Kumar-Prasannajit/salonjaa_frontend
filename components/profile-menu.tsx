@@ -45,12 +45,9 @@ type ProfileMenuProps = Pick<
   | "error"
   | "notice"
   | "signOut"
-> & { onOpenAddresses: () => void; onOpenOwnerDashboard: () => void; onOpenAdminDashboard: () => void };
+> & { onOpenAddresses: () => void; onOpenWallet: () => void; onOpenOwnerDashboard: () => void; onOpenAdminDashboard: () => void };
 
-const COMING_SOON = [
-  { icon: Wallet, label: "My Wallet" },
-  { icon: CreditCard, label: "Payment Methods" },
-] as const;
+const COMING_SOON = [{ icon: CreditCard, label: "Payment Methods" }] as const;
 
 const COMING_SOON_SECONDARY = [
   { icon: Gift, label: "Refer & Earn" },
@@ -73,6 +70,7 @@ export function ProfileMenu({
   notice,
   signOut,
   onOpenAddresses,
+  onOpenWallet,
   onOpenOwnerDashboard,
   onOpenAdminDashboard,
 }: ProfileMenuProps) {
@@ -167,6 +165,8 @@ export function ProfileMenu({
 
               <Card className="divide-y divide-border overflow-hidden p-0">
                 <NavRow icon={MapPin} label="Saved Addresses" onClick={onOpenAddresses} />
+                {/* Module 20 — GET /wallet, now a real, live feature. */}
+                <NavRow icon={Wallet} label="My Wallet" onClick={onOpenWallet} />
                 {COMING_SOON.map((item) => (
                   <NavRow key={item.label} {...item} disabled />
                 ))}

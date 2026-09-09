@@ -162,8 +162,9 @@ export type Booking = {
   bookingType: string;
   bookingStatus: BookingStatus;
   // Module 14b — set at POST /bookings creation time (ONLINE default),
-  // snapshotted onto the booking; walk-ins always get PAY_AT_SALON.
-  paymentMethod: "ONLINE" | "PAY_AT_SALON";
+  // snapshotted onto the booking; walk-ins always get PAY_AT_SALON. Module
+  // 20 adds WALLET — debits the full total immediately at creation time.
+  paymentMethod: "ONLINE" | "PAY_AT_SALON" | "WALLET";
   selectedStaffId: string | null;
   scheduledStart: string;
   scheduledEnd: string;
@@ -413,5 +414,26 @@ export type Payment = {
   currency: string;
   status: "PENDING" | "SUCCESS" | "FAILED";
   paidAt: string | null;
+  createdAt: string;
+};
+
+// GET /wallet (Module 20) — customer-only. A customer with no wallet
+// activity yet gets { balance: 0 }, not a 404, so this is never null in
+// practice once fetched.
+export type Wallet = { balance: number };
+
+// GET /wallet/transactions (Module 20) — customer-only, newest first. Only
+// ever funded by admin-approved refunds and Module 16 strikes-policy
+// advance-forfeitures (both automatic) — there's no top-up/add-funds
+// endpoint anywhere, so a CREDIT row is never something the customer did
+// themselves.
+export type WalletTransaction = {
+  id: string;
+  type: "CREDIT" | "DEBIT";
+  amount: number;
+  balanceAfter: number;
+  reason: "BOOKING_PAYMENT" | "BOOKING_REFUND" | "REFUND_APPROVED" | "ADVANCE_FORFEITURE";
+  referenceId: string | null;
+  description: string | null;
   createdAt: string;
 };
