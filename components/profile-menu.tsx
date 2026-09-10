@@ -10,6 +10,7 @@ import {
   Settings,
   Shield,
   Store,
+  Ticket,
   Wallet,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -45,7 +46,13 @@ type ProfileMenuProps = Pick<
   | "error"
   | "notice"
   | "signOut"
-> & { onOpenAddresses: () => void; onOpenWallet: () => void; onOpenOwnerDashboard: () => void; onOpenAdminDashboard: () => void };
+> & {
+  onOpenAddresses: () => void;
+  onOpenWallet: () => void;
+  onClaimBooking: () => void;
+  onOpenOwnerDashboard: () => void;
+  onOpenAdminDashboard: () => void;
+};
 
 const COMING_SOON = [{ icon: CreditCard, label: "Payment Methods" }] as const;
 
@@ -71,6 +78,7 @@ export function ProfileMenu({
   signOut,
   onOpenAddresses,
   onOpenWallet,
+  onClaimBooking,
   onOpenOwnerDashboard,
   onOpenAdminDashboard,
 }: ProfileMenuProps) {
@@ -167,6 +175,8 @@ export function ProfileMenu({
                 <NavRow icon={MapPin} label="Saved Addresses" onClick={onOpenAddresses} />
                 {/* Module 20 — GET /wallet, now a real, live feature. */}
                 <NavRow icon={Wallet} label="My Wallet" onClick={onOpenWallet} />
+                {/* Module 23 — POST /bookings/claim, entirely new feature. */}
+                <NavRow icon={Ticket} label="Claim a Walk-in Booking" onClick={onClaimBooking} />
                 {COMING_SOON.map((item) => (
                   <NavRow key={item.label} {...item} disabled />
                 ))}

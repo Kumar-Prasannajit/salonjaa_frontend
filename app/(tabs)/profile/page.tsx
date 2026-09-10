@@ -52,6 +52,7 @@ export default function ProfilePage() {
       signOut={account.signOut}
       onOpenAddresses={() => router.push("/profile/addresses")}
       onOpenWallet={() => router.push("/profile/wallet")}
+      onClaimBooking={() => router.push("/bookings/claim")}
       onOpenOwnerDashboard={() => router.push("/owner")}
       onOpenAdminDashboard={() => router.push("/admin")}
     />
