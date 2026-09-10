@@ -66,6 +66,8 @@ export default function BookingRequestedPage() {
             ? "The salon can't review this request until your advance payment clears — pay it now to move things along."
             : paymentMethod === "PAY_AT_SALON"
             ? "The salon will review your request and confirm shortly. You'll pay at the salon — no online payment needed."
+            : paymentMethod === "WALLET"
+            ? "The salon will review your request and confirm shortly. Your wallet has already been charged in full — if this booking doesn't go through, the amount is refunded back to your wallet automatically."
             : "The salon will review your request and confirm shortly. You'll be notified, and can then pay from My Bookings."}
         </p>
       </div>

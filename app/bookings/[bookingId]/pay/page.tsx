@@ -183,6 +183,8 @@ export default function PayBookingPage() {
               ? "The salon hasn't approved this booking yet."
               : booking.paymentMethod === "PAY_AT_SALON"
               ? "This booking doesn't need online payment — you'll pay at the salon."
+              : booking.paymentMethod === "WALLET"
+              ? "This booking was already paid in full from your wallet — no online payment needed."
               : booking.bookingStatus === "CANCELLED" && booking.cancellationReason
               ? `This booking was cancelled: ${booking.cancellationReason}.`
               : `This booking is ${booking.bookingStatus.toLowerCase().replace(/_/g, " ")} and can't be paid for.`}

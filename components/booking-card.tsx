@@ -64,6 +64,10 @@ export function BookingCard({
   // "Paid" badge on an already-APPROVED ONLINE booking — a PAY_AT_SALON
   // booking reaches APPROVED too, but never has a payment row, so `paid`
   // correctly stays false for it and no badge shows.
+  // Module 20: a WALLET booking debits at creation time, tracked in
+  // GET /wallet/transactions rather than GET /payments/my-payments, so
+  // `paid` (the Razorpay-based cross-check above) never covers it — checked
+  // directly off booking.paymentMethod instead, below.
   paid: boolean;
   onCancel: (booking: Booking) => void;
   cancelling: boolean;
@@ -185,10 +189,10 @@ export function BookingCard({
               Pay ₹{booking.advanceAmount} Advance
             </Button>
           )}
-          {booking.bookingStatus === "APPROVED" && paid && (
+          {booking.bookingStatus === "APPROVED" && (paid || booking.paymentMethod === "WALLET") && (
             <span className="flex flex-1 items-center justify-center gap-1.5 text-sm font-medium text-success">
               <CheckCircle2 className="size-4" />
-              Paid
+              {booking.paymentMethod === "WALLET" ? "Paid via Wallet" : "Paid"}
             </span>
           )}
           {booking.bookingStatus === "PENDING" && booking.requiresAdvancePayment && paid && (
