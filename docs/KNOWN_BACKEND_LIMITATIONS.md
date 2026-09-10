@@ -179,3 +179,36 @@ checking against the actual rows from the repro:
 Should be checked against the actual two `bookings` rows (same
 `selectedStaffId`? overlapping `scheduledStart`/`scheduledEnd`?) rather than
 guessed at further from the frontend side.
+
+## `POST /payments/create-order`'s "one payment per booking" guard isn't race-safe
+
+Found while re-testing the Payment flow (§7) end-to-end with real Razorpay
+test transactions. Two *sequential* calls are guarded correctly — call it a
+second time while a row for that booking is already `PENDING` and it 409s
+cleanly (`{"code":"CONFLICT","message":"A payment already exists for this
+booking"}`), which is what `app/bookings/[bookingId]/pay/page.tsx` relies on
+and what its own `busy`-disabled Pay button already prevents from being
+triggered twice from a single tab.
+
+But firing two calls concurrently (`Promise.all` of two `fetch`es with the
+same `bookingId`, same session) both returned `201` with two distinct real
+Razorpay orders (`order_TaS1112NB8BLhg` and `order_TaS113NNdA9DT5`), and
+`GET /payments/my-payments` confirmed two separate `PENDING` rows for the
+one booking afterward — not one row plus a rejected second attempt. The
+existence check and the insert aren't atomic (no DB unique constraint on
+`bookingId` for a live payment, no row lock around the check), so two
+requests that land in the same narrow window both pass the check before
+either commits.
+
+Not reachable from this frontend's own UI today (the Pay button's `disabled
+={busy}` blocks a same-tab double-click, and there's no legitimate way to
+issue two `create-order` calls from one page load) — but it's a real gap in
+the endpoint's own guarantee, not a frontend bug: the same booking opened in
+two tabs/devices (or a slow first response racing a user's frustrated
+second click before `busy` flips) could end up with two live Razorpay
+orders and, if the customer completed both, two `SUCCESS` payments for one
+booking. Confirmed via direct API calls against the live backend, not
+inferred from reading the code. A real fix needs a DB-level unique
+constraint (e.g. one non-`FAILED` payment per `bookingId`) or a
+transaction-level lock in `payment.service.ts`'s `create-order` handler,
+not something to work around from this side.

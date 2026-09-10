@@ -16,6 +16,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // GET /admin/refunds/:id (joined booking+payment+customer) + approve
 // (optional notes)/reject (required reason) — both only act on PENDING.
+// Module 20 — approve now actually moves money: it credits the customer's
+// wallet with the refund amount (previously just marked the decision with
+// no real effect). Confirmed live: GET /wallet/transactions shows a
+// REFUND_APPROVED credit row referencing this refund's id right after.
 export default function AdminRefundDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -127,7 +131,7 @@ export default function AdminRefundDetailPage() {
       <ReasonDialog
         open={dialog === "approve"}
         title="Approve this refund?"
-        description="This only marks the decision — no money moves automatically."
+        description="This credits the customer's Salonjaa wallet with the refund amount immediately — not a reversal on their original payment method."
         label="Notes (optional)"
         required={false}
         confirmLabel="Approve"

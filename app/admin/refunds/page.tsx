@@ -29,8 +29,9 @@ const VARIANT: Record<AdminRefund["status"], "default" | "destructive" | "outlin
 };
 
 // GET /admin/refunds?status= — no automated eligibility check, every refund
-// is read and decided by hand (PROGRESS.md's Module 9b note); "approve" here
-// only marks the decision, no money actually moves (no gateway wired for it).
+// is read and decided by hand (PROGRESS.md's Module 9b note). Module 20 —
+// "approve" now actually credits the customer's wallet with the refund
+// amount (previously just marked the decision with no money movement).
 export default function AdminRefundsPage() {
   const router = useRouter();
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("PENDING");
