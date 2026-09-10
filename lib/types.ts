@@ -67,6 +67,19 @@ export type PublicBranchSummary = {
   distanceKm: number | null;
   averageRating: number | null;
   reviewCount: number;
+  // Module 21 — computed server-side from the branch's average
+  // active-service price, no owner input. `null` only if the branch
+  // somehow has zero active services.
+  priceTier: "₹" | "₹₹" | "₹₹₹" | null;
+  // Module 21 — owner-set per branch (defaults `UNISEX`), settable via the
+  // existing POST /branches/PATCH /branches/:id body — no new endpoint.
+  genderServed: "UNISEX" | "MEN" | "WOMEN";
+  // Module 21 — listing-card only, not present on PublicBranchDetail below
+  // (which already has the full list via GET /public/promotions?branchId=).
+  // Only set when the owner has explicitly flagged one of the branch's
+  // active, in-range promotions as `featured` — a branch with active,
+  // unfeatured promotions still gets `null` here, never an automatic pick.
+  activePromotion: { title: string; bannerImageUrl: string | null } | null;
 };
 
 // GET /public/branches/:branchId embedded service row — no `status` field,
@@ -86,8 +99,10 @@ export type PublicService = {
 // (salon_gallery_images doesn't exist yet, per the backend note) — present
 // only so this doesn't need a breaking shape change once that ships.
 // `phone` is new (Module 19) — the branch's own phone column, null if the
-// owner never set one — closes the "Contact"/"Call Salon" gap.
-export type PublicBranchDetail = PublicBranchSummary & {
+// owner never set one — closes the "Contact"/"Call Salon" gap. Also gains
+// priceTier/genderServed same as the listing row (Module 21), but never
+// activePromotion — that field is listing-card only.
+export type PublicBranchDetail = Omit<PublicBranchSummary, "activePromotion"> & {
   description: string | null;
   gallery: string[];
   latitude: number | null;

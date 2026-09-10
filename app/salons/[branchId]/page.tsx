@@ -7,6 +7,7 @@ import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import type { PublicBranchDetail } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -104,6 +105,15 @@ export default function SalonDetailsPage() {
               </h1>
               {branch.verificationStatus === "VERIFIED" && <BadgeCheck className="size-5 shrink-0 text-primary" />}
             </div>
+            {/* Module 21 — same signals as components/salon-card.tsx's listing
+                row, minus activePromotion (listing-card only). UNISEX is the
+                unmarked default, same reasoning as that component. */}
+            {(branch.priceTier || branch.genderServed !== "UNISEX") && (
+              <div className="mt-1.5 flex gap-1.5">
+                {branch.priceTier && <Badge variant="outline">{branch.priceTier}</Badge>}
+                {branch.genderServed !== "UNISEX" && <Badge variant="outline">{branch.genderServed === "MEN" ? "Men only" : "Women only"}</Badge>}
+              </div>
+            )}
             <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="size-3.5 shrink-0" />
               {branch.addressLine1}, {branch.city}
