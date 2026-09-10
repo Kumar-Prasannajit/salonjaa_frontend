@@ -74,8 +74,8 @@ export default function CheckoutPage() {
   // hit POST /bookings' 422 blind.
   useEffect(() => {
     if (!isAuthenticated || !user?.name) return;
-    apiFetch<Wallet>("/wallet")
-      .then(setWallet)
+    apiFetch<{ data: Wallet }>("/wallet")
+      .then((r) => setWallet(r.data))
       .catch(() => {
         // A failed fetch just leaves the WALLET option disabled below
         // (walletInsufficient defaults true when wallet is null).

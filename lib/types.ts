@@ -91,6 +91,32 @@ export type ServiceVariant = {
   price: number;
 };
 
+// GET/POST /services/:id/variants, PATCH/DELETE .../variants/:variantId
+// (Module 22, owner-scoped, frontend_handover.md's "Service variants" section) —
+// same envelope/sub-resource pattern as staff assignment. Includes `status`
+// (owner CRUD only) and `branchServiceId`, unlike the public/customer-facing
+// ServiceVariant above which the backend only ever returns already-ACTIVE.
+export type OwnerServiceVariant = {
+  id: string;
+  branchServiceId: string;
+  name: string;
+  price: number;
+  status: "ACTIVE" | "INACTIVE";
+};
+
+// GET /public/promotions?branchId= (Module 16's public counterpart of the owner
+// CRUD) — active, in-range promotions for a branch, regardless of `featured`
+// (that flag only decides the listing-card banner via activePromotion above).
+// Bare fields only — no branchIds/serviceIds/featured/active on the public DTO.
+export type PublicPromotion = {
+  id: string;
+  title: string;
+  description: string | null;
+  bannerImageUrl: string | null;
+  startsAt: string;
+  endsAt: string;
+};
+
 // GET /public/branches/:branchId embedded service row — no `status` field,
 // the backend only ever returns bookable (ACTIVE) services here.
 // `variants` is new (Module 22): empty means book directly with basePrice
@@ -353,6 +379,11 @@ export type Branch = {
   openingTime: string;
   closingTime: string;
   status: string;
+  // Module 21 — owner-set (defaults UNISEX), settable via the existing
+  // POST /branches/PATCH /branches/:id body (frontend_handover.md's new
+  // optional `genderServed` field, no new endpoint) — drives the same-name
+  // listing-card/detail signal in PublicBranchSummary/Detail above.
+  genderServed: "UNISEX" | "MEN" | "WOMEN";
 };
 
 export type BranchHoliday = { id: string; date: string; reason: string | null };
@@ -539,9 +570,10 @@ export type Payment = {
   createdAt: string;
 };
 
-// GET /wallet (Module 20) — customer-only. A customer with no wallet
-// activity yet gets { balance: 0 }, not a 404, so this is never null in
-// practice once fetched.
+// GET /wallet (Module 20) — customer-only, envelope-wrapped ({ data: { balance } },
+// same convention as e.g. Salon above) — a caller that treats the response as a bare
+// { balance } gets `undefined` and silently renders no number. A customer with no
+// wallet activity yet gets { balance: 0 }, not a 404, so `data` is never null once fetched.
 export type Wallet = { balance: number };
 
 // GET /wallet/transactions (Module 20) — customer-only, newest first. Only

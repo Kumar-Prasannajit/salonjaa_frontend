@@ -33,9 +33,13 @@ export default function ClaimBookingPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  // Gated on authChecked too — otherwise this fires on the initial
+  // isAuthenticated:false before useAccount's mount-time cookie-restore has
+  // resolved, bouncing an actually-still-signed-in visitor (e.g. a hard
+  // reload of this page) straight back to /profile.
   useEffect(() => {
-    if (!account.isAuthenticated) router.replace("/profile");
-  }, [account.isAuthenticated, router]);
+    if (account.authChecked && !account.isAuthenticated) router.replace("/profile");
+  }, [account.authChecked, account.isAuthenticated, router]);
 
   if (!account.isAuthenticated) return null;
 

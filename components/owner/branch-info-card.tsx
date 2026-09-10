@@ -15,6 +15,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // optional, opening-before-closing still enforced). No DELETE endpoint exists
 // for a branch (frontend_handover.md only documents POST/GET/GET/PATCH), so
 // there's deliberately no delete action here.
+// GET /branches/:id returns openingTime/closingTime as "HH:MM:SS" (a Postgres
+// `time` column serialized whole), but branch.validator.ts's timeSchema for
+// PATCH strictly requires "HH:MM" — sliced to 5 chars here so an edit that
+// never re-touches either time field (e.g. only changing genderServed below)
+// doesn't 400 on a value the form itself never mutated.
+const toHHMM = (t: string) => t.slice(0, 5);
+
 export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdated: (b: Branch) => void }) {
   const toast = useToastContext();
   const [editing, setEditing] = useState(false);
@@ -28,8 +35,9 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
     state: branch.state,
     postalCode: branch.postalCode,
     totalChairs: String(branch.totalChairs),
-    openingTime: branch.openingTime,
-    closingTime: branch.closingTime,
+    openingTime: toHHMM(branch.openingTime),
+    closingTime: toHHMM(branch.closingTime),
+    genderServed: branch.genderServed,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -53,6 +61,7 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
         totalChairs: Number(form.totalChairs),
         openingTime: form.openingTime,
         closingTime: form.closingTime,
+        genderServed: form.genderServed,
       };
       const result = await apiFetch<{ data: Branch }>(`/branches/${branch.id}`, { method: "PATCH", body: JSON.stringify(body) });
       onUpdated(result.data);
@@ -130,6 +139,19 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
             <Label htmlFor="b-close">Closes</Label>
             <Input id="b-close" type="time" required value={form.closingTime} onChange={set("closingTime")} />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="b-gender">Gender served</Label>
+            <select
+              id="b-gender"
+              value={form.genderServed}
+              onChange={(e) => setForm((f) => ({ ...f, genderServed: e.target.value as typeof f.genderServed }))}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              <option value="UNISEX">Unisex</option>
+              <option value="MEN">Men</option>
+              <option value="WOMEN">Women</option>
+            </select>
+          </div>
           <Button type="submit" disabled={busy} className="sm:col-span-2 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
             {busy ? "Saving…" : "Save changes"}
           </Button>
@@ -144,6 +166,7 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
           <p>
             {branch.totalChairs} chairs • {branch.openingTime}–{branch.closingTime}
           </p>
+          <p>{branch.genderServed === "UNISEX" ? "Unisex" : branch.genderServed === "MEN" ? "Men" : "Women"}</p>
         </div>
       )}
     </Card>

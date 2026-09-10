@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ListChecks, Plus, X } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import { useToastContext } from "@/hooks/toast-context";
-import type { OwnerService, ServiceCategory, Staff } from "@/lib/types";
+import type { OwnerService, OwnerServiceVariant, ServiceCategory, Staff } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,13 @@ const BLANK_FORM = { categoryId: "", name: "", durationMinutes: "30", basePrice:
 // assignment. Like leave, there's no endpoint to list a service's currently
 // assigned staff (service.service.ts has assign/remove only) — the "Assigned
 // staff" panel below only reflects assignments made in this session.
+//
+// Module 22 — GET/POST /services/:id/variants, PATCH/DELETE .../variants/:variantId
+// (frontend_handover.md's "Service variants" section, owner CRUD). Unlike staff
+// assignment, a real GET exists here, so the "Variants" panel fetches and shows
+// the service's actual current variants (fetched once per service, on first
+// expand) rather than only this-session actions. A price-only override —
+// there's no duration field on a variant, it always matches the base service's.
 export function ServiceManager({ branchId }: { branchId: string }) {
   const toast = useToastContext();
   const [services, setServices] = useState<OwnerService[] | null>(null);
@@ -38,6 +45,15 @@ export function ServiceManager({ branchId }: { branchId: string }) {
   const [assignSelection, setAssignSelection] = useState("");
   const [assignBusy, setAssignBusy] = useState(false);
   const [assignError, setAssignError] = useState("");
+
+  // Module 22 — GET/POST /services/:id/variants, PATCH/DELETE .../variants/:variantId.
+  // Unlike staff assignment above, GET does exist here, so variantsByService is
+  // fetched on expand rather than only reflecting this-session actions.
+  const [variantServiceId, setVariantServiceId] = useState<string | null>(null);
+  const [variantsByService, setVariantsByService] = useState<Record<string, OwnerServiceVariant[]>>({});
+  const [variantForm, setVariantForm] = useState({ name: "", price: "" });
+  const [variantBusy, setVariantBusy] = useState(false);
+  const [variantError, setVariantError] = useState("");
 
   const load = async () => {
     setError("");
@@ -154,6 +170,79 @@ export function ServiceManager({ branchId }: { branchId: string }) {
     }
   };
 
+  const toggleVariants = async (serviceId: string) => {
+    if (variantServiceId === serviceId) {
+      setVariantServiceId(null);
+      return;
+    }
+    setVariantServiceId(serviceId);
+    setVariantError("");
+    setVariantForm({ name: "", price: "" });
+    if (!variantsByService[serviceId]) {
+      try {
+        const result = await apiFetch<{ data: OwnerServiceVariant[] }>(`/services/${serviceId}/variants`);
+        setVariantsByService((prev) => ({ ...prev, [serviceId]: result.data }));
+      } catch (e) {
+        setVariantError(messageFromError(e));
+      }
+    }
+  };
+
+  const addVariant = async (serviceId: string) => {
+    if (!variantForm.name.trim() || !variantForm.price) return;
+    setVariantError("");
+    setVariantBusy(true);
+    try {
+      const result = await apiFetch<{ data: OwnerServiceVariant }>(`/services/${serviceId}/variants`, {
+        method: "POST",
+        body: JSON.stringify({ name: variantForm.name.trim(), price: Number(variantForm.price) }),
+      });
+      setVariantsByService((prev) => ({ ...prev, [serviceId]: [...(prev[serviceId] || []), result.data] }));
+      setVariantForm({ name: "", price: "" });
+      toast.success("Variant added.");
+    } catch (e) {
+      const msg = messageFromError(e);
+      setVariantError(msg);
+      toast.error(msg);
+    } finally {
+      setVariantBusy(false);
+    }
+  };
+
+  const toggleVariantStatus = async (serviceId: string, variant: OwnerServiceVariant) => {
+    setVariantError("");
+    try {
+      const nextStatus = variant.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+      const result = await apiFetch<{ data: OwnerServiceVariant }>(`/services/${serviceId}/variants/${variant.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      setVariantsByService((prev) => ({
+        ...prev,
+        [serviceId]: (prev[serviceId] || []).map((v) => (v.id === variant.id ? result.data : v)),
+      }));
+      toast.success(nextStatus === "ACTIVE" ? "Variant reactivated." : "Variant deactivated.");
+    } catch (e) {
+      const msg = messageFromError(e);
+      setVariantError(msg);
+      toast.error(msg);
+    }
+  };
+
+  const removeVariant = async (serviceId: string, variantId: string) => {
+    if (!window.confirm("Remove this variant?")) return;
+    setVariantError("");
+    try {
+      await apiFetch(`/services/${serviceId}/variants/${variantId}`, { method: "DELETE" });
+      setVariantsByService((prev) => ({ ...prev, [serviceId]: (prev[serviceId] || []).filter((v) => v.id !== variantId) }));
+      toast.success("Variant removed.");
+    } catch (e) {
+      const msg = messageFromError(e);
+      setVariantError(msg);
+      toast.error(msg);
+    }
+  };
+
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between">
@@ -196,10 +285,65 @@ export function ServiceManager({ branchId }: { branchId: string }) {
               <Button size="xs" variant="outline" onClick={() => setAssignServiceId(assignServiceId === s.id ? null : s.id)}>
                 Staff
               </Button>
+              <Button size="xs" variant="outline" onClick={() => toggleVariants(s.id)}>
+                Variants
+              </Button>
               <Button size="xs" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => remove(s)}>
                 Remove
               </Button>
             </div>
+
+            {variantServiceId === s.id && (
+              <div className="mt-3 space-y-3 border-t border-border pt-3">
+                <p className="text-xs text-muted-foreground">
+                  An empty list here means this service books directly at its base price — no variant pick needed on Select Services.
+                </p>
+                {variantError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{variantError}</AlertDescription>
+                  </Alert>
+                )}
+                {(variantsByService[s.id] || []).map((v) => (
+                  <div key={v.id} className="flex items-center justify-between rounded-md border border-border px-2 py-1.5 text-xs">
+                    <span>
+                      {v.name} — ₹{v.price} <span className="text-muted-foreground">({v.status})</span>
+                    </span>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => toggleVariantStatus(s.id, v)} className="text-muted-foreground hover:text-primary">
+                        {v.status === "ACTIVE" ? "Deactivate" : "Reactivate"}
+                      </button>
+                      <button type="button" onClick={() => removeVariant(s.id, v.id)} aria-label="Remove variant" className="text-muted-foreground hover:text-destructive">
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Name (e.g. Long Hair)"
+                    value={variantForm.name}
+                    onChange={(e) => setVariantForm((f) => ({ ...f, name: e.target.value }))}
+                    className="flex-1"
+                  />
+                  <Input
+                    type="number"
+                    min="1"
+                    placeholder="Price"
+                    value={variantForm.price}
+                    onChange={(e) => setVariantForm((f) => ({ ...f, price: e.target.value }))}
+                    className="w-24"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={!variantForm.name.trim() || !variantForm.price || variantBusy}
+                    onClick={() => addVariant(s.id)}
+                    className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+                  >
+                    {variantBusy ? "Adding…" : "Add"}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {assignServiceId === s.id && (
               <div className="mt-3 space-y-3 border-t border-border pt-3">

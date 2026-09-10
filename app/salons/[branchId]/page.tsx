@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BadgeCheck, MapPin, Phone, Star, Store } from "lucide-react";
+import { ArrowLeft, BadgeCheck, BadgePercent, MapPin, Phone, Star, Store } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
-import type { PublicBranchDetail } from "@/lib/types";
+import type { PublicBranchDetail, PublicPromotion } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ export default function SalonDetailsPage() {
   const [branch, setBranch] = useState<PublicBranchDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState("");
+  const [promotions, setPromotions] = useState<PublicPromotion[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,6 +40,23 @@ export default function SalonDetailsPage() {
         if (cancelled) return;
         if (e instanceof ApiError && e.status === 404) setNotFound(true);
         else setError(messageFromError(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [branchId]);
+
+  // Module 16/21 — GET /public/promotions?branchId= lists every active,
+  // in-range promotion regardless of `featured` (that flag only decides the
+  // listing-card banner elsewhere) — the full list an interested customer
+  // would want once they're already looking at this specific salon.
+  useEffect(() => {
+    let cancelled = false;
+    apiFetch<{ data: PublicPromotion[] }>(`/public/promotions?branchId=${branchId}`, {}, { auth: false })
+      .then((result) => !cancelled && setPromotions(result.data))
+      .catch(() => {
+        // Non-fatal — the salon page itself already loaded fine; a promotions
+        // fetch failure just means this section stays empty.
       });
     return () => {
       cancelled = true;
@@ -143,6 +161,23 @@ export default function SalonDetailsPage() {
                 <span className="text-muted-foreground underline underline-offset-2">No reviews yet</span>
               )}
             </button>
+
+            {promotions.length > 0 && (
+              <div className="mt-6 space-y-2">
+                {promotions.map((p) => (
+                  <Card key={p.id} className="flex-row items-start gap-2.5 p-3">
+                    <BadgePercent className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium">{p.title}</p>
+                      {p.description && <p className="text-xs text-muted-foreground">{p.description}</p>}
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Until {new Date(p.endsAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             {branch.description && (
               <>

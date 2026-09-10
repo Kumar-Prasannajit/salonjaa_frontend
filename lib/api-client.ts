@@ -119,21 +119,27 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   let response = await rawRequest(path, options, auth ? tokens?.accessToken : undefined);
 
-  // Guards on `tokens` being present (we believe there's a session), not on
-  // `tokens.refreshToken` specifically — a session restored on mount (see
-  // hooks/use-account.ts) has no in-memory refreshToken string at all, only
-  // the httpOnly cookie, and still needs this retry path to work. When we do
-  // have a real refreshToken, it's sent in the body exactly as before
-  // (unchanged behavior for a normal login); when we don't, an empty body
-  // lets the backend fall back to the cookie.
-  if (auth && response.status === 401 && tokens) {
+  // Deliberately does NOT guard on `tokens` being present. A page that fires
+  // an authenticated apiFetch on mount without waiting for useAccount's own
+  // mount-time restore (hooks/use-account.ts's authChecked) can call this
+  // with `tokens` still null on a hard reload — that's still a request worth
+  // retrying against the httpOnly cookie, not a hard failure, so a signed-in
+  // visitor doesn't see a raw 401 ("Missing or invalid Authorization header")
+  // race on any page that isn't individually authChecked-gated. When we do
+  // have a real in-memory refreshToken, it's sent in the body exactly as
+  // before (unchanged behavior for a normal login); when we don't (no tokens
+  // at all, or a cookie-restored session with no refreshToken string), an
+  // empty body lets the backend fall back to the cookie — genuinely
+  // signed-out just 401s again here and falls through to SessionExpiredError
+  // below, one extra round-trip but no worse UX than before.
+  if (auth && response.status === 401) {
     const refreshResponse = await rawRequest("/auth/refresh-token", {
       method: "POST",
-      body: JSON.stringify(tokens.refreshToken ? { refreshToken: tokens.refreshToken } : {}),
+      body: JSON.stringify(tokens?.refreshToken ? { refreshToken: tokens.refreshToken } : {}),
     });
     if (refreshResponse.ok) {
       const { accessToken } = await refreshResponse.json();
-      updateTokens({ accessToken, refreshToken: tokens.refreshToken });
+      updateTokens({ accessToken, refreshToken: tokens?.refreshToken || "" });
       response = await rawRequest(path, options, accessToken);
     } else {
       updateTokens(null);

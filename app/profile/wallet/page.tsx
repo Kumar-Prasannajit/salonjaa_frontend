@@ -32,16 +32,20 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<WalletTransaction[] | null>(null);
   const [error, setError] = useState("");
 
+  // Gated on authChecked too — otherwise this fires on the initial
+  // isAuthenticated:false before useAccount's mount-time cookie-restore has
+  // resolved, bouncing an actually-still-signed-in visitor (e.g. a hard
+  // reload of this page) straight back to /profile.
   useEffect(() => {
-    if (!account.isAuthenticated) router.replace("/profile");
-  }, [account.isAuthenticated, router]);
+    if (account.authChecked && !account.isAuthenticated) router.replace("/profile");
+  }, [account.authChecked, account.isAuthenticated, router]);
 
   useEffect(() => {
     if (!account.isAuthenticated) return;
     setError("");
-    Promise.all([apiFetch<Wallet>("/wallet"), apiFetch<{ data: WalletTransaction[] }>("/wallet/transactions")])
+    Promise.all([apiFetch<{ data: Wallet }>("/wallet"), apiFetch<{ data: WalletTransaction[] }>("/wallet/transactions")])
       .then(([walletResult, txResult]) => {
-        setWallet(walletResult);
+        setWallet(walletResult.data);
         setTransactions(txResult.data);
       })
       .catch((e) => setError(messageFromError(e)));

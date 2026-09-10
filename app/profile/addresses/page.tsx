@@ -13,11 +13,13 @@ export default function AddressesPage() {
   const account = useAccountContext();
   const router = useRouter();
 
-  // Tokens are memory-only (lib/api-client.ts) — a hard refresh, or landing
-  // here directly, means isAuthenticated is false with nothing to show.
+  // A hard refresh (or landing here directly) starts with isAuthenticated
+  // false until the mount-time cookie-restore in useAccount finishes —
+  // gating on authChecked too avoids bouncing an actually-still-signed-in
+  // visitor back to /profile before that restore had a chance to resolve.
   useEffect(() => {
-    if (!account.isAuthenticated) router.replace("/profile");
-  }, [account.isAuthenticated, router]);
+    if (account.authChecked && !account.isAuthenticated) router.replace("/profile");
+  }, [account.authChecked, account.isAuthenticated, router]);
 
   if (!account.isAuthenticated) return null;
 

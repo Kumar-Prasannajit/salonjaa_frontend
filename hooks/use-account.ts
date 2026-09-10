@@ -16,6 +16,15 @@ export function useAccount() {
   const [otp, setOtp] = useState("");
   const [stage, setStage] = useState<"email" | "otp">("email");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // False until the mount-time /auth/refresh-token cookie-restore attempt
+  // below has resolved (either way). A route guard that redirects on
+  // `!isAuthenticated` must wait for this to flip true first — otherwise it
+  // fires on the initial `isAuthenticated: false` before the restore had a
+  // chance to run, bouncing an actually-still-signed-in visitor (e.g. a hard
+  // reload of /profile/addresses) straight back out. See that guard's own
+  // note in each of app/profile/addresses, app/profile/wallet,
+  // app/bookings/claim.
+  const [authChecked, setAuthChecked] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
 
@@ -135,6 +144,8 @@ export function useAccount() {
         await loadAccount();
       } catch {
         // No valid session cookie (or none at all) — stay signed out.
+      } finally {
+        if (!cancelled) setAuthChecked(true);
       }
     })();
     return () => {
@@ -329,6 +340,7 @@ export function useAccount() {
     clearFeedback,
     // shared
     isAuthenticated,
+    authChecked,
     user,
     roles,
     isSalonOwner,
