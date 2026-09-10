@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Flag, MessageSquareOff, Store } from "lucide-react";
+import { ArrowLeft, Flag, MessageSquareOff, MessageSquareReply, Store } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import { useAccountContext } from "@/hooks/account-context";
 import { useToastContext } from "@/hooks/toast-context";
-import type { Review } from "@/lib/types";
+import type { Review, SalonListItem } from "@/lib/types";
 import { StarRating } from "@/components/star-rating";
 import { ReportReviewDialog } from "@/components/report-review-dialog";
+import { ReasonDialog } from "@/components/reason-dialog";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -33,11 +34,57 @@ export default function SalonReviewsPage() {
   const [reportError, setReportError] = useState("");
   const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
 
+  // Module 8 owner-reply — no design mockup exists for this, and no "manage my
+  // salon's reviews" screen either, so this reuses the same public review list
+  // any customer sees rather than inventing a separate owner-only page. Only
+  // the owning Salon Owner (not just *a* Salon Owner — GET /salons is scoped
+  // to the signed-in owner's own salons, so membership here already proves
+  // ownership) gets a Reply action, and only on a review with no reply yet.
+  const [isOwner, setIsOwner] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<string | null>(null);
+  const [replyBusy, setReplyBusy] = useState(false);
+  const [replyError, setReplyError] = useState("");
+
   useEffect(() => {
     apiFetch<{ data: Review[] }>(`/reviews/salon/${salonId}`, {}, { auth: false })
       .then((result) => setReviews(result.data))
       .catch((e) => setError(messageFromError(e)));
   }, [salonId]);
+
+  useEffect(() => {
+    if (!account.isSalonOwner) {
+      setIsOwner(false);
+      return;
+    }
+    let cancelled = false;
+    apiFetch<SalonListItem[]>("/salons")
+      .then((mine) => !cancelled && setIsOwner(mine.some((s) => s.id === salonId)))
+      .catch(() => !cancelled && setIsOwner(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [salonId, account.isSalonOwner]);
+
+  const confirmReply = async (message: string) => {
+    if (!replyTarget) return;
+    setReplyBusy(true);
+    setReplyError("");
+    try {
+      const result = await apiFetch<{ data: Review }>(`/reviews/${replyTarget}/reply`, {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      });
+      setReviews((prev) => prev && prev.map((r) => (r.id === replyTarget ? { ...r, reply: result.data.reply } : r)));
+      setReplyTarget(null);
+      toast.success("Reply posted.");
+    } catch (e) {
+      const msg = messageFromError(e);
+      setReplyError(msg);
+      toast.error(msg);
+    } finally {
+      setReplyBusy(false);
+    }
+  };
 
   const average = reviews?.length ? reviews.reduce((sum, r) => sum + r.overallRating, 0) / reviews.length : 0;
 
@@ -123,7 +170,7 @@ export default function SalonReviewsPage() {
                     <p className="mt-1 text-secondary-foreground">{r.reply.message}</p>
                   </div>
                 )}
-                <div className="mt-3">
+                <div className="mt-3 flex items-center gap-4">
                   {reportedIds.has(r.id) ? (
                     <span className="text-xs text-muted-foreground">Reported</span>
                   ) : account.isAuthenticated ? (
@@ -141,6 +188,19 @@ export default function SalonReviewsPage() {
                   ) : (
                     <span className="text-xs text-muted-foreground">Sign in to report a review</span>
                   )}
+                  {isOwner && !r.reply && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyError("");
+                        setReplyTarget(r.id);
+                      }}
+                      className="flex items-center gap-1 text-xs font-medium text-primary"
+                    >
+                      <MessageSquareReply className="size-3" />
+                      Reply
+                    </button>
+                  )}
                 </div>
               </Card>
             ))}
@@ -156,6 +216,21 @@ export default function SalonReviewsPage() {
         onClose={() => {
           setReportTarget(null);
           setReportError("");
+        }}
+      />
+
+      <ReasonDialog
+        open={!!replyTarget}
+        title="Reply to this review"
+        label="Your response"
+        placeholder="Thank you for the feedback…"
+        confirmLabel="Post Reply"
+        busy={replyBusy}
+        error={replyError}
+        onConfirm={confirmReply}
+        onClose={() => {
+          setReplyTarget(null);
+          setReplyError("");
         }}
       />
     </main>

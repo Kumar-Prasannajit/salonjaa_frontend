@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { CalendarClock, CheckCircle2, Phone } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
-import type { Booking, BookingDetail } from "@/lib/types";
+import type { Booking, BookingDetail, Refund } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +23,19 @@ const CANCELLATION_REASON_LABEL: Record<string, string> = {
   BOOKED_BY_MISTAKE: "Booked by mistake",
   BOOKED_ELSEWHERE: "Booked elsewhere",
   OTHER: "Other",
+};
+
+// Module 8/20 — GET /payments/refunds' status enum (mirrors AdminRefund's),
+// lowercased into plain customer-facing copy rather than shown as-is.
+const REFUND_STATUS_LABEL: Record<Refund["status"], string> = {
+  PENDING: "requested — awaiting review",
+  // Admin approve credits the wallet in the same action (Module 20) — not a
+  // separate later step, so this says so rather than leaving it sounding
+  // like money is still on its way.
+  APPROVED: "approved — credited to your wallet",
+  PROCESSING: "processing",
+  COMPLETED: "completed",
+  REJECTED: "not approved",
 };
 
 const STATUS_STYLE: Record<Booking["bookingStatus"], { label: string; className: string }> = {
@@ -54,6 +67,8 @@ export function BookingCard({
   onCancel,
   cancelling,
   onRespondToReschedule,
+  refund,
+  onRequestRefund,
 }: {
   booking: Booking;
   detail?: BookingDetail;
@@ -76,6 +91,12 @@ export function BookingCard({
   // known to be pending, since there's no endpoint to discover that first —
   // see that dialog's own note.
   onRespondToReschedule: (booking: Booking) => void;
+  // Module 8/20 — this customer's existing refund request for this booking,
+  // if any (app/(tabs)/bookings/page.tsx's GET /payments/refunds cross-check,
+  // same pattern as the `paid` prop above). undefined means none exists yet,
+  // so "Request Refund" is offered instead of a status.
+  refund?: Refund;
+  onRequestRefund: (booking: Booking) => void;
 }) {
   const router = useRouter();
   const status = STATUS_STYLE[booking.bookingStatus];
@@ -98,6 +119,17 @@ export function BookingCard({
   // read as fully settled.
   const advancePaidOnly = booking.paymentMethod === "PAY_AT_SALON" && booking.requiresAdvancePayment && paid;
   const pastCutoff = isPastCancellationCutoff(booking.scheduledStart);
+  // Module 8/20 — mirrors payment.service.ts's requestRefund() eligibility:
+  // CANCELLED/COMPLETED + a real successful FULL payment on the booking.
+  // requestRefund() looks up findSuccessfulPaymentForBooking(bookingId,
+  // "FULL") specifically — a requiresAdvancePayment booking's only payment
+  // row is purpose ADVANCE, which that lookup never matches (confirmed live:
+  // 409 "No successful payment found for this booking"), and correctly so —
+  // an advance is already returned automatically via the ADVANCE_FORFEITURE
+  // wallet credit on cancel (§5), so offering a second refund path for the
+  // same money here would double up on it. Excluding requiresAdvancePayment
+  // keeps this button from ever appearing where the backend would 409.
+  const refundEligible = (booking.bookingStatus === "CANCELLED" || booking.bookingStatus === "COMPLETED") && paid && !booking.requiresAdvancePayment;
 
   return (
     <Card className="p-4">
@@ -165,6 +197,18 @@ export function BookingCard({
             Salon Reviews
           </Button>
         </div>
+      )}
+
+      {refundEligible && (
+        refund ? (
+          <p className="mt-2 text-xs text-muted-foreground">Refund {REFUND_STATUS_LABEL[refund.status]}</p>
+        ) : (
+          <div className="mt-3">
+            <Button size="sm" variant="outline" className="w-full" onClick={() => onRequestRefund(booking)}>
+              Request Refund
+            </Button>
+          </div>
+        )
       )}
 
       {booking.bookingStatus === "AWAITING_PAYMENT" && (

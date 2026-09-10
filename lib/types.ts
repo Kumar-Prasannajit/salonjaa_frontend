@@ -570,6 +570,24 @@ export type Payment = {
   createdAt: string;
 };
 
+// GET /payments/refunds — customer-only, the requester's own refund requests
+// (mirrors AdminRefund's status enum, minus the joined booking/payment/
+// customer context an admin needs but a customer already has from their own
+// booking). Used only to know "have I already requested a refund for this
+// booking" (components/booking-card.tsx) — there's no design mockup for a
+// dedicated "my refunds" screen, so this doesn't get one either.
+export type Refund = {
+  id: string;
+  bookingId: string;
+  paymentId: string;
+  customerId: string;
+  amount: number;
+  reason: string | null;
+  status: "PENDING" | "APPROVED" | "PROCESSING" | "COMPLETED" | "REJECTED";
+  processedAt: string | null;
+  createdAt: string;
+};
+
 // GET /wallet (Module 20) — customer-only, envelope-wrapped ({ data: { balance } },
 // same convention as e.g. Salon above) — a caller that treats the response as a bare
 // { balance } gets `undefined` and silently renders no number. A customer with no

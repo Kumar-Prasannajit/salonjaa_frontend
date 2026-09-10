@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarOff, Lock } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
-import type { Booking, BookingDetail, CancellationReasonCode, Payment } from "@/lib/types";
+import type { Booking, BookingDetail, CancellationReasonCode, Payment, Refund } from "@/lib/types";
 import { useAccountContext } from "@/hooks/account-context";
 import { useToastContext } from "@/hooks/toast-context";
 import { BookingCard } from "@/components/booking-card";
 import { CancelBookingDialog } from "@/components/cancel-booking-dialog";
 import { RespondToRescheduleDialog } from "@/components/respond-to-reschedule-dialog";
+import { ReasonDialog } from "@/components/reason-dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -44,6 +45,10 @@ export default function BookingsPage() {
   const [details, setDetails] = useState<Record<string, BookingDetail>>({});
   const requestedDetailIds = useRef(new Set<string>());
   const [paidBookingIds, setPaidBookingIds] = useState<Set<string>>(new Set());
+  // Module 8/20 — one refund request per booking in practice (the backend
+  // never documents more than one live at a time), so the latest by
+  // createdAt per bookingId is all a card needs to show.
+  const [refundByBookingId, setRefundByBookingId] = useState<Record<string, Refund>>({});
 
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
@@ -53,17 +58,33 @@ export default function BookingsPage() {
   const [rescheduleBusy, setRescheduleBusy] = useState(false);
   const [rescheduleError, setRescheduleError] = useState("");
 
+  const [refundTarget, setRefundTarget] = useState<Booking | null>(null);
+  const [refundBusy, setRefundBusy] = useState(false);
+  const [refundError, setRefundError] = useState("");
+
   const loadBookings = async () => {
     setError("");
     try {
-      const [bookingsResult, paymentsResult] = await Promise.all([
+      const [bookingsResult, paymentsResult, refundsResult] = await Promise.all([
         apiFetch<{ data: Booking[] }>("/users/me/bookings"),
         // Needed only so an already-paid APPROVED booking stops offering "Pay
         // Now" — bookingStatus alone never changes on successful payment.
         apiFetch<{ data: Payment[] }>("/payments/my-payments"),
+        // Module 8/20's POST /payments/refund-request has no frontend entry
+        // point yet elsewhere — GET /payments/refunds (this customer's own
+        // requests) is what lets a booking card know whether to offer
+        // "Request Refund" or show an existing request's status instead of
+        // offering it again.
+        apiFetch<{ data: Refund[] }>("/payments/refunds"),
       ]);
       setBookings(bookingsResult.data);
       setPaidBookingIds(new Set(paymentsResult.data.filter((p) => p.status === "SUCCESS").map((p) => p.bookingId)));
+      const latestByBooking: Record<string, Refund> = {};
+      for (const r of refundsResult.data) {
+        const existing = latestByBooking[r.bookingId];
+        if (!existing || r.createdAt > existing.createdAt) latestByBooking[r.bookingId] = r;
+      }
+      setRefundByBookingId(latestByBooking);
     } catch (e) {
       setError(messageFromError(e));
     }
@@ -141,6 +162,26 @@ export default function BookingsPage() {
       toast.error(msg);
     } finally {
       setRescheduleBusy(false);
+    }
+  };
+
+  const confirmRequestRefund = async (reason: string) => {
+    if (!refundTarget) return;
+    setRefundBusy(true);
+    setRefundError("");
+    try {
+      const body: Record<string, string> = { bookingId: refundTarget.id };
+      if (reason) body.reason = reason;
+      const result = await apiFetch<{ data: Refund }>("/payments/refund-request", { method: "POST", body: JSON.stringify(body) });
+      setRefundByBookingId((prev) => ({ ...prev, [refundTarget.id]: result.data }));
+      setRefundTarget(null);
+      toast.success("Refund requested.");
+    } catch (e) {
+      const msg = messageFromError(e);
+      setRefundError(msg);
+      toast.error(msg);
+    } finally {
+      setRefundBusy(false);
     }
   };
 
@@ -237,6 +278,8 @@ export default function BookingsPage() {
             onCancel={setCancelTarget}
             cancelling={cancelBusy && cancelTarget?.id === b.id}
             onRespondToReschedule={setRescheduleTarget}
+            refund={refundByBookingId[b.id]}
+            onRequestRefund={setRefundTarget}
           />
         ))}
       </div>
@@ -261,6 +304,22 @@ export default function BookingsPage() {
         onClose={() => {
           setRescheduleTarget(null);
           setRescheduleError("");
+        }}
+      />
+
+      <ReasonDialog
+        open={!!refundTarget}
+        title="Request a refund?"
+        description={refundTarget ? `${refundTarget.bookingNumber} — ₹${refundTarget.totalAmount}. An admin reviews every request by hand.` : undefined}
+        label="Reason (optional)"
+        required={false}
+        confirmLabel="Request Refund"
+        busy={refundBusy}
+        error={refundError}
+        onConfirm={confirmRequestRefund}
+        onClose={() => {
+          setRefundTarget(null);
+          setRefundError("");
         }}
       />
     </main>

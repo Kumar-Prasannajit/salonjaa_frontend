@@ -180,6 +180,15 @@ Should be checked against the actual two `bookings` rows (same
 `selectedStaffId`? overlapping `scheduledStart`/`scheduledEnd`?) rather than
 guessed at further from the frontend side.
 
+## ~~`POST /payments/create-order`'s "one payment per booking" guard isn't race-safe~~ — Fixed
+
+**Backend fixed this** with a partial unique index (`payments_active_booking_purpose_unique`
+on `(booking_id, purpose) WHERE status <> 'FAILED'`) — re-verified live after the fix: two
+genuinely concurrent `create-order` calls for the same booking now correctly produce one `201`
+and one `409` ("A payment already exists for this booking"), confirmed via `GET
+/payments/my-payments` showing exactly one row afterward. Original write-up kept below for
+context.
+
 ## `POST /payments/create-order`'s "one payment per booking" guard isn't race-safe
 
 Found while re-testing the Payment flow (§7) end-to-end with real Razorpay
@@ -213,6 +222,14 @@ constraint (e.g. one non-`FAILED` payment per `bookingId`) or a
 transaction-level lock in `payment.service.ts`'s `create-order` handler,
 not something to work around from this side.
 
+## ~~A claimed walk-in still looks anonymous to the Salon Owner~~ — Fixed
+
+**Backend fixed this** — `claimBooking()` now nulls `customerName`/`customerPhone` on a
+successful claim. Re-verified live: a fresh walk-in claimed by a real customer now returns
+`customerName: null, customerPhone: null` alongside the real `customerId`, so
+`salon-booking-card.tsx`'s existing `|| "Registered customer"` fallback renders correctly with
+no frontend change needed. Original write-up kept below for context.
+
 ## A claimed walk-in still looks anonymous to the Salon Owner
 
 Found while re-testing §16's cross-role scenario ("Owner creates a
@@ -241,20 +258,42 @@ time. A real fix needs the backend to either null out
 `|| "Registered customer"` fallback kicks in) or expose a `claimedAt`/
 `claimedBy` field the frontend can render instead.
 
-## No frontend UI for two live, documented endpoints — `POST /payments/refund-request` and `POST /reviews/:reviewId/reply`
+## ~~No frontend UI for two live, documented endpoints~~ — Built
 
-Found while re-testing §8 (Reviews) and §15 (Admin Refunds). Both are
-🟢 Live per `frontend_handover.md` (lines 159 and 179), but neither has
-any UI anywhere in this app — confirmed by grepping the whole
-`app/`/`components/` tree, not just spot-checking a likely page. A
-customer today has no way to actually request a refund through the
-app; a Salon Owner has no way to actually reply to a review through
-the app. Both were verified to work when called directly against the
-live backend (a real refund request and a real reply were created this
-way, to still test the *other* side of each feature — the Admin
-Refunds Queue and the public review list respectively). Not built here
-since each needs a product/design decision on placement and copy, and
-this was a testing pass, not a feature-build one.
+**Built now, with reasonable defaults chosen (no design mockup existed for either):**
+- **Request Refund**: `components/booking-card.tsx` + `app/(tabs)/bookings/page.tsx`. Shown on
+  a `CANCELLED`/`COMPLETED` booking card only when eligible exactly as the backend defines it —
+  a real `SUCCESS` payment exists **and** it isn't an advance-only `PAY_AT_SALON` booking (that
+  money already comes back automatically via `ADVANCE_FORFEITURE` on cancel — see below).
+  `GET /payments/refunds` (customer's own requests) drives whether the card shows the button or
+  an existing request's status ("requested — awaiting review", "approved — credited to your
+  wallet", "not approved", etc.) instead of offering it again.
+- **Owner reply**: `app/reviews/salon/[salonId]/page.tsx`. A "Reply" action appears next to
+  "Report" on any review with no reply yet, but only for the actual owning Salon Owner —
+  checked by fetching `GET /salons` (scoped to the signed-in owner's own salons) and confirming
+  this page's `salonId` is in that list, not just any `SALON_OWNER` role. Reuses the existing
+  `ReasonDialog` component for the compose step.
+
+Both verified end-to-end live: a real refund request created via the UI, and a real reply
+posted via the UI and immediately visible in the public list (only possible now that the
+list-endpoint reply bug below is fixed).
+
+One eligibility nuance worth noting for future reference: originally the refund button was
+shown for **any** paid `CANCELLED`/`COMPLETED` booking, but a live test against an
+advance-paid `PAY_AT_SALON` booking surfaced a 409 ("No successful payment found for this
+booking") — `requestRefund()` looks up `findSuccessfulPaymentForBooking(bookingId, "FULL")`
+specifically, and an advance payment's `purpose` is `"ADVANCE"`, never `"FULL"`. This is
+correct backend behavior, not a bug: that money is already returned automatically via the
+`ADVANCE_FORFEITURE` wallet credit on cancel, so a second refund path for the same amount would
+double up on it. The frontend eligibility check now excludes `requiresAdvancePayment` bookings
+so the button never appears where the backend would reject it.
+
+## ~~Salon-owner review replies are invisible everywhere they'd actually be seen~~ — Fixed
+
+**Backend fixed this** — `toDTOList()` (shared by `listBySalon`/`listByStaff`/`listByService`)
+now fetches replies for the batch via `listRepliesForReviews()` before building each DTO.
+Re-verified live: `GET /reviews/salon/:salonId` for a review with a real reply now returns the
+`reply` object instead of `null`. Original write-up kept below for context.
 
 ## Salon-owner review replies are invisible everywhere they'd actually be seen
 

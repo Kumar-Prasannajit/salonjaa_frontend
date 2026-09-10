@@ -6,9 +6,9 @@ Chrome browser automation plus direct API calls for setup/verification. Every it
 navigated to and exercised — nothing here is inferred from reading code alone unless explicitly marked as such.
 
 **Bottom line: all 16 sections pass.** 9 real frontend bugs were found and fixed (commits below, all with
-clean `tsc`/`eslint`/`build`). 5 real backend gaps were found and documented in
-[`KNOWN_BACKEND_LIMITATIONS.md`](./KNOWN_BACKEND_LIMITATIONS.md) rather than worked around — 3 are backend
-bugs that need a backend fix, 2 are missing frontend screens for endpoints the backend already ships live.
+clean `tsc`/`eslint`/`build`). 3 real backend bugs were found, documented, sent to a backend session to fix,
+and re-verified live once fixed. The 2 missing frontend screens the pass surfaced (refund-request, owner
+review-reply) have since been built and verified end-to-end — see the bottom of this report.
 
 ## How to read this
 
@@ -53,18 +53,16 @@ proposer being correctly blocked (404, non-leaking) from approving their own pro
 
 **7. Payment** — ✅ full real-money-flow verified via Razorpay test mode: successful payment → booking
 `APPROVED` + payment `SUCCESS`; dismiss-without-paying → `FAILED` (not stuck `PENDING`) → retry → `SUCCESS`,
-correct payment history on both rows; sequential double-payment-attempt → clean 409. 🚩 Found: *concurrent*
-`create-order` calls (two requests racing) both succeed, creating two live Razorpay orders for one booking —
-a real backend race condition, not reachable from this frontend's own UI (the Pay button disables itself), so
-flagged rather than worked around. Bad-signature failure path isn't independently reachable without forging a
-signature, which real browser automation can't do — skipped, not faked.
+correct payment history on both rows; sequential double-payment-attempt → clean 409. 🔧 Found: *concurrent*
+`create-order` calls (two requests racing) both succeeded, creating two live Razorpay orders for one
+booking — a real backend race condition. Fixed in a follow-up backend session (a partial unique index) and
+re-verified live: now one `201`, one clean `409`. Bad-signature failure path isn't independently reachable
+without forging a signature, which real browser automation can't do — skipped, not faked.
 
-**8. Reviews** — ✅ create/edit/report/no-duplicate all verified with real data. 🚩 Owner-reply: no frontend
-UI exists anywhere for the live `POST /reviews/:reviewId/reply` endpoint. Worse, calling it directly revealed
-a **real backend bug**: `review.service.ts`'s `listBySalon`/`listByStaff`/`listByService` never fetch reply
-data at all, so a reply is genuinely persisted and returned by the write endpoint but invisible through every
-list a customer could ever see — the frontend's existing `r.reply && (...)` rendering is correct code sitting
-on top of a response that never carries the data.
+**8. Reviews** — ✅ create/edit/report/no-duplicate all verified with real data. 🔧 Owner-reply: initially no
+frontend UI existed, and a backend bug made replies invisible in every list endpoint regardless. Both fixed
+— the backend bug by a follow-up backend session (re-verified live), the missing UI built here (a "Reply"
+action on `/reviews/salon/[salonId]`, owner-only, verified end-to-end).
 
 **9. Wallet** — ✅ balance and transaction list verified with real `CREDIT` rows (`ADVANCE_FORFEITURE`,
 `REFUND_APPROVED`) in correct newest-first order. 🔧 Found: `GET /wallet`'s envelope (`{data: {balance}}`) was
@@ -103,9 +101,10 @@ refund approve/reject, complaint resolve + already-resolved 409, reports overvie
 **16. Cross-role scenarios** — ✅ all 6, including a genuine two-session race condition test (two real
 customer sessions racing `POST /bookings` for the same last slot via distinct bearer tokens, not simulated
 sequentially) — one got `201`, the other a clean `409`, no double-booking. Admin-suspend-mid-flow correctly
-leaves an existing booking untouched while blocking new ones. 🚩 Found: a claimed walk-in's `customerId`
-genuinely transfers to the claiming customer, but `customerName`/`customerPhone` never update — so the owner
-can never tell a still-anonymous walk-in apart from one a real customer claimed. Backend gap, not fixed here.
+leaves an existing booking untouched while blocking new ones. 🔧 Found: a claimed walk-in's `customerId`
+genuinely transferred to the claiming customer, but `customerName`/`customerPhone` never updated — so the
+owner could never tell a still-anonymous walk-in apart from one a real customer claimed. Fixed in a
+follow-up backend session (claim now nulls those two fields) and re-verified live.
 
 ## Bugs found and fixed this pass (frontend, this repo)
 
@@ -123,21 +122,41 @@ and `npm run build` all clean after every fix.
 8. Admin refund-approve dialog had stale "no money moves" copy (commit `316ee4d`).
 9. An advance-only-paid `PAY_AT_SALON` booking showed a misleading plain "Paid" badge (commit `5ec8026`).
 
-## Backend gaps found and documented, not fixed here
+## Backend gaps — all 3 now fixed and re-verified live
 
-Full detail in [`KNOWN_BACKEND_LIMITATIONS.md`](./KNOWN_BACKEND_LIMITATIONS.md). Summary:
+All 3 backend bugs were fixed in `../salonjaa-backend` and re-verified live against the running server
+(not just re-read in code):
 
-1. **`POST /payments/create-order` race condition** — concurrent calls both succeed, producing two live
-   Razorpay orders for one booking. Needs a DB unique constraint or transaction lock.
-2. **Review replies invisible in every list view** — `review.service.ts`'s list queries never fetch reply
-   data. Needs a join/fetch fix in `toDTOList()`.
-3. **Claimed walk-ins keep showing anonymous placeholder name/phone** — `claimBooking()` only updates
-   `customerId`, never clears/updates `customerName`/`customerPhone`. Needs either a null-out on claim or a
-   `claimedAt`/`claimedBy` field.
-4. **No frontend UI for `POST /payments/refund-request`** (live, customer-facing) — needs a product/design
-   decision on placement, then frontend work (this repo, once decided).
-5. **No frontend UI for `POST /reviews/:reviewId/reply`** (live, `SALON_OWNER`-only) — same, frontend work
-   once gap #2 above is fixed (no point building UI for replies that can't be seen).
+1. **`POST /payments/create-order` race condition** — fixed with a partial unique index
+   (`payments_active_booking_purpose_unique`). Re-tested: two genuinely concurrent `create-order` calls for
+   the same booking now produce one `201` and one clean `409`, confirmed via `GET /payments/my-payments`
+   showing exactly one row.
+2. **Review replies invisible in every list view** — fixed: `toDTOList()` now fetches replies for the whole
+   batch before building DTOs. Re-tested: `GET /reviews/salon/:salonId` for a review with a real reply now
+   returns it instead of `null`.
+3. **Claimed walk-ins keep showing anonymous placeholder name/phone** — fixed: `claimBooking()` now nulls
+   `customerName`/`customerPhone` on a successful claim. Re-tested: a fresh claim now correctly returns
+   `customerName: null` alongside the real `customerId`.
 
-Gaps #1–#3 need a backend engineer/session. Gaps #4–#5 are frontend work for this repo, best done once #2/#3
-are fixed so the new UI has correct data to work with.
+Full detail (including the original repro steps) in
+[`KNOWN_BACKEND_LIMITATIONS.md`](./KNOWN_BACKEND_LIMITATIONS.md), each marked `~~...~~ — Fixed`.
+
+## New frontend features built (reasonable defaults chosen, no design mockups existed)
+
+Now that gaps #2/#3 above are fixed, the two missing frontend screens were built:
+
+- **Request Refund** (`components/booking-card.tsx`, `app/(tabs)/bookings/page.tsx`) — a button on any
+  `CANCELLED`/`COMPLETED` booking card with a real successful *full* payment (excludes advance-only
+  `PAY_AT_SALON` bookings, whose money already comes back automatically via `ADVANCE_FORFEITURE` on cancel —
+  confirmed live this exact case 409s on the backend, correctly, so the frontend excludes it too). Shows the
+  request's live status (pending/approved-credited/rejected/etc.) once one exists, via
+  `GET /payments/refunds`, instead of offering the button again.
+- **Owner reply to a review** (`app/reviews/salon/[salonId]/page.tsx`) — a "Reply" action next to "Report",
+  shown only to the actual owning Salon Owner (checked against `GET /salons`, not just anyone with the
+  `SALON_OWNER` role), reusing the existing `ReasonDialog` component for the compose step.
+
+Both verified end-to-end live: a real refund request submitted and its status displayed correctly for both an
+approved and a rejected case (using the two refund requests created during the original test pass); a real
+reply posted as the owner and immediately visible in the public review list.
+
+`npx tsc --noEmit`, `npx eslint .`, and `npm run build` all clean after every change in this follow-up pass.
