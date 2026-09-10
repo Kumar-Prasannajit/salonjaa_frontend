@@ -212,3 +212,74 @@ inferred from reading the code. A real fix needs a DB-level unique
 constraint (e.g. one non-`FAILED` payment per `bookingId`) or a
 transaction-level lock in `payment.service.ts`'s `create-order` handler,
 not something to work around from this side.
+
+## A claimed walk-in still looks anonymous to the Salon Owner
+
+Found while re-testing §16's cross-role scenario ("Owner creates a
+walk-in → Customer B claims it by `bookingNumber` → Owner's booking
+list shows it linked to Customer B, not anonymous anymore"). Created a
+walk-in as the owner (`customerName: "Walkin Payonline"`, a placeholder
+phone, `customerId: null`), had Customer B claim it via
+`POST /bookings/claim`, then re-fetched the same booking from the
+owner side (`GET /salon-bookings?status=APPROVED`): `customerId` had
+genuinely changed to Customer B's real user id (confirmed against the
+`customerId` on Customer B's own payment row for the same booking) —
+the claim itself works correctly. But `customerName`/`customerPhone`
+were unchanged, still the original walk-in placeholder values.
+
+Traced into the backend: `booking.repository.ts`'s `claimBooking()`
+only ever does `UPDATE bookings SET customer_id = $1 ...` — it never
+touches `customerName`/`customerPhone`, and there's no separate
+"claimed" boolean anywhere in the `BookingDTO`. `components/owner/
+salon-booking-card.tsx` just renders `booking.customerName ||
+"Registered customer"` — correct frontend code, but the field it reads
+never changes on claim, so **the owner has no way to ever tell a
+still-anonymous walk-in apart from one a real registered customer
+claimed** — both show the same static name/phone captured at creation
+time. A real fix needs the backend to either null out
+`customerName`/`customerPhone` on a successful claim (so the existing
+`|| "Registered customer"` fallback kicks in) or expose a `claimedAt`/
+`claimedBy` field the frontend can render instead.
+
+## No frontend UI for two live, documented endpoints — `POST /payments/refund-request` and `POST /reviews/:reviewId/reply`
+
+Found while re-testing §8 (Reviews) and §15 (Admin Refunds). Both are
+🟢 Live per `frontend_handover.md` (lines 159 and 179), but neither has
+any UI anywhere in this app — confirmed by grepping the whole
+`app/`/`components/` tree, not just spot-checking a likely page. A
+customer today has no way to actually request a refund through the
+app; a Salon Owner has no way to actually reply to a review through
+the app. Both were verified to work when called directly against the
+live backend (a real refund request and a real reply were created this
+way, to still test the *other* side of each feature — the Admin
+Refunds Queue and the public review list respectively). Not built here
+since each needs a product/design decision on placement and copy, and
+this was a testing pass, not a feature-build one.
+
+## Salon-owner review replies are invisible everywhere they'd actually be seen
+
+Found immediately after using the workaround above to create a real
+reply via `POST /reviews/:reviewId/reply` (Module 8) — the endpoint
+itself works and echoes the new `reply` back in its own response, but
+reloading `GET /reviews/salon/:salonId` for the exact same review
+afterward shows `"reply": null`. Traced into the backend source
+(`review.service.ts`): `listBySalon`/`listByStaff`/`listByService` all
+route through a shared `toDTOList()` that only ever fetches
+`findCategoryRatings()` per row — none of them fetch replies at all,
+so every DTO from any list endpoint hardcodes `reply: null`
+regardless of what's actually in the `review_responses` table. Only
+`getDetail()` (single review by id) calls `listReplies()` and includes
+the real value — and nothing in this frontend, or apparently anywhere
+in `frontend_handover.md`'s documented contract, ever calls a
+single-review detail route.
+
+Net effect: a Salon Owner's reply is real, persisted, and correctly
+returned by the write endpoint, but **no customer-facing view can ever
+show it** — `app/reviews/salon/[salonId]/page.tsx`'s existing
+`r.reply && (...)` rendering (Module 8) is correct frontend code
+sitting on top of a backend response that just never carries the data
+it's checking for. This is a backend fix (join/fetch replies in
+`toDTOList`, or replace the three list queries with one that includes
+`review_responses`), not something to patch by adding a second
+frontend fetch-per-review — that would be N+1 requests for what should
+be one list call.

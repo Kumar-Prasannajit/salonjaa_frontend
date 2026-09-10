@@ -88,6 +88,15 @@ export function BookingCard({
   // GET /payments/my-payments cross-check catches any successful payment
   // for this booking, advance or full.
   const advanceDue = booking.bookingStatus === "PENDING" && booking.requiresAdvancePayment && !paid;
+  // `paid` is a same-value cross-check for both "fully paid" and "advance
+  // paid" (its own comment above), so once the booking reaches APPROVED it
+  // can't tell those two apart on its own — a PAY_AT_SALON booking whose
+  // advance cleared is `paid === true` too, but the remaining
+  // (totalAmount - advanceAmount) is still owed at the salon. Only an
+  // ONLINE (or WALLET) booking's `paid` actually means "nothing left to
+  // pay"; a PAY_AT_SALON+advance one needs its own label so it doesn't
+  // read as fully settled.
+  const advancePaidOnly = booking.paymentMethod === "PAY_AT_SALON" && booking.requiresAdvancePayment && paid;
   const pastCutoff = isPastCancellationCutoff(booking.scheduledStart);
 
   return (
@@ -192,7 +201,13 @@ export function BookingCard({
               Pay ₹{booking.advanceAmount} Advance
             </Button>
           )}
-          {booking.bookingStatus === "APPROVED" && (paid || booking.paymentMethod === "WALLET") && (
+          {booking.bookingStatus === "APPROVED" && advancePaidOnly && (
+            <span className="flex flex-1 items-center justify-center gap-1.5 text-sm font-medium text-success">
+              <CheckCircle2 className="size-4" />
+              Advance Paid — ₹{(booking.totalAmount - (booking.advanceAmount ?? 0)).toFixed(2)} due at salon
+            </span>
+          )}
+          {booking.bookingStatus === "APPROVED" && !advancePaidOnly && (paid || booking.paymentMethod === "WALLET") && (
             <span className="flex flex-1 items-center justify-center gap-1.5 text-sm font-medium text-success">
               <CheckCircle2 className="size-4" />
               {booking.paymentMethod === "WALLET" ? "Paid via Wallet" : "Paid"}
