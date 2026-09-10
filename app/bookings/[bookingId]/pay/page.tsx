@@ -23,8 +23,16 @@ const METHODS = [
 // the booking to be AWAITING_PAYMENT (Module 14b — was APPROVED before that
 // shipped); this page is the "Pay Now" destination from an AWAITING_PAYMENT
 // booking in My Bookings. A PAY_AT_SALON booking never reaches this state at
-// all (approve goes straight to APPROVED), so it never lands here with
-// anything to pay.
+// all (approve goes straight to APPROVED).
+//
+// Module 16 adds a second, independent reason to land here: a restricted
+// customer's PENDING PAY_AT_SALON booking with requiresAdvancePayment needs
+// its 10%-of-total advance settled before the salon can even review it.
+// create-order auto-detects this (same endpoint, same {bookingId} body, no
+// separate advance route) and returns an order for just the advance amount
+// — this page only needs to gate on it and adjust copy/amount shown, the
+// actual pay()/verifyPayment() calls are unchanged either way.
+//
 // Razorpay's Standard Checkout widget provides its own payment-method UI
 // once opened — the method cards below aren't a substitute for that, they
 // set `prefill.method` so the widget opens on the tab the customer already
@@ -36,7 +44,7 @@ export default function PayBookingPage() {
 
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [loadError, setLoadError] = useState("");
-  const [alreadyPaid, setAlreadyPaid] = useState(false);
+  const [hasSuccessfulPayment, setHasSuccessfulPayment] = useState(false);
 
   const [method, setMethod] = useState<(typeof METHODS)[number]["key"]>("upi");
   const [busy, setBusy] = useState(false);
@@ -46,14 +54,23 @@ export default function PayBookingPage() {
   useEffect(() => {
     Promise.all([apiFetch<{ booking: BookingDetail }>(`/bookings/${bookingId}`), apiFetch<{ data: Payment[] }>("/payments/my-payments")])
       .then(([bookingResult, paymentsResult]) => {
-        setBooking(bookingResult.booking);
-        if (paymentsResult.data.some((p) => p.bookingId === bookingId && p.status === "SUCCESS")) {
-          setAlreadyPaid(true);
-          router.replace(`/bookings/${bookingId}/confirmed`);
-        }
+        const booking = bookingResult.booking;
+        const paid = paymentsResult.data.some((p) => p.bookingId === bookingId && p.status === "SUCCESS");
+        setBooking(booking);
+        setHasSuccessfulPayment(paid);
+        // Only an ONLINE booking's full payment lands on the "Confirmed"
+        // screen — an advance payment for a still-PENDING PAY_AT_SALON
+        // booking is real money moved, but the booking itself isn't
+        // confirmed yet (still awaiting the salon's decision).
+        if (paid && booking.paymentMethod === "ONLINE") router.replace(`/bookings/${bookingId}/confirmed`);
       })
       .catch((e) => setLoadError(messageFromError(e)));
   }, [bookingId, router]);
+
+  const advanceDue = !!booking && booking.bookingStatus === "PENDING" && booking.requiresAdvancePayment && !hasSuccessfulPayment;
+  const advancePaidAwaitingApproval = !!booking && booking.bookingStatus === "PENDING" && booking.requiresAdvancePayment && hasSuccessfulPayment;
+  const payable = booking?.bookingStatus === "AWAITING_PAYMENT" || advanceDue;
+  const amountDue = advanceDue ? booking?.advanceAmount ?? 0 : booking?.totalAmount ?? 0;
 
   const pay = async () => {
     if (!booking) return;
@@ -113,8 +130,13 @@ export default function PayBookingPage() {
     setError("");
     try {
       await apiFetch("/payments/verify", { method: "POST", body: JSON.stringify({ orderId, paymentId, signature }) });
-      toast.success("Payment successful.");
-      router.push(`/bookings/${bookingId}/confirmed`);
+      if (advanceDue) {
+        toast.success("Advance paid — your booking is now waiting on the salon's approval.");
+        router.push("/bookings");
+      } else {
+        toast.success("Payment successful.");
+        router.push(`/bookings/${bookingId}/confirmed`);
+      }
     } catch (e) {
       // Backend marks the payment FAILED on a bad signature, which — per
       // payment.service.ts — the next create-order call is allowed to retry.
@@ -125,7 +147,7 @@ export default function PayBookingPage() {
     }
   };
 
-  if (alreadyPaid) return null;
+  if (hasSuccessfulPayment && booking?.paymentMethod === "ONLINE") return null;
 
   return (
     <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
@@ -150,12 +172,14 @@ export default function PayBookingPage() {
         </div>
       )}
 
-      {booking && booking.bookingStatus !== "AWAITING_PAYMENT" && (
+      {booking && !payable && (
         <Card className="mt-6 flex flex-col items-center gap-3 border-dashed p-10 text-center">
           <Lock className="size-8 text-accent" />
-          <p className="font-semibold">Not ready for payment yet</p>
+          <p className="font-semibold">{advancePaidAwaitingApproval ? "Advance paid" : "Not ready for payment yet"}</p>
           <p className="text-sm text-muted-foreground">
-            {booking.bookingStatus === "PENDING"
+            {advancePaidAwaitingApproval
+              ? "Your advance payment went through — this booking is now waiting on the salon's approval. The remainder stays payable at the salon."
+              : booking.bookingStatus === "PENDING"
               ? "The salon hasn't approved this booking yet."
               : booking.paymentMethod === "PAY_AT_SALON"
               ? "This booking doesn't need online payment — you'll pay at the salon."
@@ -169,8 +193,18 @@ export default function PayBookingPage() {
         </Card>
       )}
 
-      {booking && booking.bookingStatus === "AWAITING_PAYMENT" && (
+      {booking && payable && (
         <div className="mt-6 space-y-4">
+          {advanceDue && (
+            <Alert>
+              <Info className="size-4" />
+              <AlertDescription>
+                Your recent booking history requires a ₹{booking.advanceAmount} advance (10% of the ₹{booking.totalAmount} total) before
+                the salon can review this request. The remaining ₹{booking.totalAmount - (booking.advanceAmount ?? 0)} stays payable at
+                the salon.
+              </AlertDescription>
+            </Alert>
+          )}
           <p className="text-sm font-medium">Select Payment Method</p>
           <div className="space-y-3">
             {METHODS.map(({ key, icon: Icon, label, description }) => (
@@ -215,7 +249,7 @@ export default function PayBookingPage() {
             onClick={pay}
           >
             <Lock className="size-4" />
-            {busy ? "Please wait…" : `Pay ₹${booking.totalAmount}`}
+            {busy ? "Please wait…" : `Pay ₹${amountDue}`}
           </Button>
           <p className="text-center text-xs text-muted-foreground">Your payment information is safe and encrypted.</p>
         </div>

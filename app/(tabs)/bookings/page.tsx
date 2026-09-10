@@ -80,8 +80,10 @@ export default function BookingsPage() {
         .filter((b) => b.bookingStatus === "PENDING" || b.bookingStatus === "AWAITING_PAYMENT" || b.bookingStatus === "APPROVED")
         .sort((a, b) => a.scheduledStart.localeCompare(b.scheduledStart)),
       completed: list.filter((b) => b.bookingStatus === "COMPLETED").sort((a, b) => b.scheduledStart.localeCompare(a.scheduledStart)),
+      // Module 16 — NO_SHOW folds in here too, same reasoning as EXPIRED:
+      // closest terminal state in spirit, no 4th tab in the design for it.
       cancelled: list
-        .filter((b) => b.bookingStatus === "CANCELLED" || b.bookingStatus === "EXPIRED")
+        .filter((b) => b.bookingStatus === "CANCELLED" || b.bookingStatus === "EXPIRED" || b.bookingStatus === "NO_SHOW")
         .sort((a, b) => b.scheduledStart.localeCompare(a.scheduledStart)),
     };
   }, [bookings]);

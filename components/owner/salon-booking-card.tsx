@@ -15,6 +15,8 @@ const STATUS_STYLE: Record<string, { label: string; className: string }> = {
   CANCELLED: { label: "Cancelled", className: "text-destructive" },
   REJECTED: { label: "Rejected", className: "text-destructive" },
   EXPIRED: { label: "Expired", className: "text-muted-foreground" },
+  // Module 16 — POST /salon-bookings/:id/no-show's terminal state.
+  NO_SHOW: { label: "No-show", className: "text-destructive" },
 };
 
 // GET /salon-bookings row — Module 11's resolved salonName/branchName/staffName
@@ -25,6 +27,7 @@ export function SalonBookingCard({
   onApprove,
   onReject,
   onRespondToReschedule,
+  onNoShow,
   busy,
 }: {
   booking: Booking;
@@ -35,6 +38,10 @@ export function SalonBookingCard({
   // is known to be pending, since there's no endpoint to discover that
   // first — see that dialog's own note.
   onRespondToReschedule: (b: Booking) => void;
+  // Module 16 — POST /salon-bookings/:id/no-show ({} body). Errors: 400 too
+  // early (before scheduledStart), 409 if not APPROVED — the client-side
+  // gate below (canMarkNoShow) gets both cases right without a round trip.
+  onNoShow: (b: Booking) => void;
   busy: boolean;
 }) {
   const router = useRouter();
@@ -48,6 +55,12 @@ export function SalonBookingCard({
   const canDecide = booking.bookingStatus === "PENDING";
   const canReschedule =
     booking.bookingStatus === "PENDING" || booking.bookingStatus === "AWAITING_PAYMENT" || booking.bookingStatus === "APPROVED";
+  // Module 16 — a restricted customer's advance must clear before Approve
+  // works (409 otherwise); the owner can't see payment status directly
+  // (no owner-facing payments list for one customer's booking), so this is
+  // informational rather than a hard client-side block on the button.
+  const advancePending = booking.bookingStatus === "PENDING" && booking.requiresAdvancePayment;
+  const canMarkNoShow = booking.bookingStatus === "APPROVED" && new Date(booking.scheduledStart).getTime() <= Date.now();
 
   return (
     <Card className="p-4">
@@ -79,7 +92,13 @@ export function SalonBookingCard({
         </p>
       )}
 
-      {(canDecide || canReschedule) && (
+      {advancePending && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          This customer needs a ₹{booking.advanceAmount} advance payment cleared before you can approve — Approve will fail until then.
+        </p>
+      )}
+
+      {(canDecide || canReschedule || canMarkNoShow) && (
         <div className="mt-4 flex flex-wrap gap-2">
           {canDecide && (
             <>
@@ -94,6 +113,11 @@ export function SalonBookingCard({
           {canReschedule && (
             <Button size="sm" variant="ghost" className="flex-1" onClick={() => router.push(`/owner/bookings/${booking.id}/propose-reschedule`)}>
               Propose Reschedule
+            </Button>
+          )}
+          {canMarkNoShow && (
+            <Button size="sm" variant="outline" className="flex-1 text-destructive hover:text-destructive" disabled={busy} onClick={() => onNoShow(booking)}>
+              Mark No-Show
             </Button>
           )}
         </div>

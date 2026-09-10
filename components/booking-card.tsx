@@ -21,7 +21,20 @@ const STATUS_STYLE: Record<Booking["bookingStatus"], { label: string; className:
   COMPLETED: { label: "Completed", className: "text-success" },
   CANCELLED: { label: "Cancelled", className: "text-destructive" },
   EXPIRED: { label: "Expired", className: "text-muted-foreground" },
+  // Module 16 — POST /salon-bookings/:id/no-show's terminal state.
+  NO_SHOW: { label: "No-show", className: "text-destructive" },
 };
+
+// Module 16 — finalized policy (no longer provisional/no-cutoff): free up
+// to 2 hours before scheduledStart, blocked entirely inside that window
+// (409, no exceptions). Computed client-side purely to disable the button
+// and explain why upfront — the backend's own cutoff is what actually
+// enforces this; see components/cancel-booking-dialog.tsx.
+const CANCELLATION_CUTOFF_HOURS = 2;
+function isPastCancellationCutoff(scheduledStart: string) {
+  const hoursUntilStart = (new Date(scheduledStart).getTime() - Date.now()) / 3_600_000;
+  return hoursUntilStart < CANCELLATION_CUTOFF_HOURS;
+}
 
 export function BookingCard({
   booking,
@@ -53,6 +66,14 @@ export function BookingCard({
   const status = STATUS_STYLE[booking.bookingStatus];
   const isUpcoming =
     booking.bookingStatus === "PENDING" || booking.bookingStatus === "AWAITING_PAYMENT" || booking.bookingStatus === "APPROVED";
+  // Module 16 — a restricted customer's PAY_AT_SALON booking needs this
+  // settled before the salon can even review it, independent of the normal
+  // AWAITING_PAYMENT flow above (which this booking's paymentMethod never
+  // enters). `paid` doubles as "advance already paid" here too — the same
+  // GET /payments/my-payments cross-check catches any successful payment
+  // for this booking, advance or full.
+  const advanceDue = booking.bookingStatus === "PENDING" && booking.requiresAdvancePayment && !paid;
+  const pastCutoff = isPastCancellationCutoff(booking.scheduledStart);
 
   return (
     <Card className="p-4">
@@ -112,6 +133,12 @@ export function BookingCard({
         </p>
       )}
 
+      {advanceDue && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          A ₹{booking.advanceAmount} advance is required before the salon can review this booking.
+        </p>
+      )}
+
       {isUpcoming && (
         <div className="mt-4 flex gap-2">
           {booking.bookingStatus === "AWAITING_PAYMENT" && (
@@ -123,19 +150,47 @@ export function BookingCard({
               Pay Now
             </Button>
           )}
+          {advanceDue && (
+            <Button
+              size="sm"
+              className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+              onClick={() => router.push(`/bookings/${booking.id}/pay`)}
+            >
+              Pay ₹{booking.advanceAmount} Advance
+            </Button>
+          )}
           {booking.bookingStatus === "APPROVED" && paid && (
             <span className="flex flex-1 items-center justify-center gap-1.5 text-sm font-medium text-success">
               <CheckCircle2 className="size-4" />
               Paid
             </span>
           )}
+          {booking.bookingStatus === "PENDING" && booking.requiresAdvancePayment && paid && (
+            <span className="flex flex-1 items-center justify-center gap-1.5 text-sm font-medium text-success">
+              <CheckCircle2 className="size-4" />
+              Advance Paid
+            </span>
+          )}
           <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/bookings/${booking.id}/reschedule`)}>
             Reschedule
           </Button>
-          <Button size="sm" variant="ghost" className="flex-1 text-destructive hover:text-destructive" disabled={cancelling} onClick={() => onCancel(booking)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="flex-1 text-destructive hover:text-destructive"
+            disabled={cancelling || pastCutoff}
+            title={pastCutoff ? `Cancellation is only allowed until ${CANCELLATION_CUTOFF_HOURS} hours before the scheduled time` : undefined}
+            onClick={() => onCancel(booking)}
+          >
             {cancelling ? "Cancelling…" : "Cancel"}
           </Button>
         </div>
+      )}
+
+      {isUpcoming && pastCutoff && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Too close to the appointment time to cancel — free cancellation closes {CANCELLATION_CUTOFF_HOURS} hours before your slot.
+        </p>
       )}
 
       {isUpcoming && (
