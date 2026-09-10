@@ -8,6 +8,7 @@ import { useToastContext } from "@/hooks/toast-context";
 import type { Booking } from "@/lib/types";
 import { SalonBookingCard } from "@/components/owner/salon-booking-card";
 import { ReasonDialog } from "@/components/reason-dialog";
+import { RespondToRescheduleDialog } from "@/components/respond-to-reschedule-dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,6 +39,10 @@ export default function OwnerBookingsPage() {
   const [approveTarget, setApproveTarget] = useState<Booking | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null);
   const [dialogError, setDialogError] = useState("");
+
+  const [rescheduleTarget, setRescheduleTarget] = useState<Booking | null>(null);
+  const [rescheduleBusy, setRescheduleBusy] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState("");
 
   const load = async (status: TabKey) => {
     setError("");
@@ -90,6 +95,44 @@ export default function OwnerBookingsPage() {
     }
   };
 
+  const acceptReschedule = async () => {
+    if (!rescheduleTarget) return;
+    setRescheduleBusy(true);
+    setRescheduleError("");
+    try {
+      await apiFetch(`/bookings/${rescheduleTarget.id}/approve-reschedule`, { method: "POST" });
+      setRescheduleTarget(null);
+      toast.success("Reschedule accepted.");
+      await load(tab);
+    } catch (e) {
+      const msg = messageFromError(e);
+      setRescheduleError(msg);
+      toast.error(msg);
+    } finally {
+      setRescheduleBusy(false);
+    }
+  };
+
+  const declineReschedule = async (reason: string) => {
+    if (!rescheduleTarget) return;
+    setRescheduleBusy(true);
+    setRescheduleError("");
+    try {
+      const body: Record<string, string> = {};
+      if (reason) body.reason = reason;
+      await apiFetch(`/bookings/${rescheduleTarget.id}/reject-reschedule`, { method: "POST", body: JSON.stringify(body) });
+      setRescheduleTarget(null);
+      toast.success("Reschedule declined.");
+      await load(tab);
+    } catch (e) {
+      const msg = messageFromError(e);
+      setRescheduleError(msg);
+      toast.error(msg);
+    } finally {
+      setRescheduleBusy(false);
+    }
+  };
+
   return (
     <main>
       <div className="flex items-center justify-between">
@@ -137,7 +180,14 @@ export default function OwnerBookingsPage() {
         )}
 
         {bookings?.map((b) => (
-          <SalonBookingCard key={b.id} booking={b} busy={busyId === b.id} onApprove={setApproveTarget} onReject={setRejectTarget} />
+          <SalonBookingCard
+            key={b.id}
+            booking={b}
+            busy={busyId === b.id}
+            onApprove={setApproveTarget}
+            onReject={setRejectTarget}
+            onRespondToReschedule={setRescheduleTarget}
+          />
         ))}
       </div>
 
@@ -170,6 +220,18 @@ export default function OwnerBookingsPage() {
         onClose={() => {
           setRejectTarget(null);
           setDialogError("");
+        }}
+      />
+
+      <RespondToRescheduleDialog
+        booking={rescheduleTarget}
+        busy={rescheduleBusy}
+        error={rescheduleError}
+        onAccept={acceptReschedule}
+        onDecline={declineReschedule}
+        onClose={() => {
+          setRescheduleTarget(null);
+          setRescheduleError("");
         }}
       />
     </main>

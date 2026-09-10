@@ -29,6 +29,7 @@ export function BookingCard({
   paid,
   onCancel,
   cancelling,
+  onRespondToReschedule,
 }: {
   booking: Booking;
   detail?: BookingDetail;
@@ -42,6 +43,11 @@ export function BookingCard({
   paid: boolean;
   onCancel: (booking: Booking) => void;
   cancelling: boolean;
+  // Module 15 — opens components/respond-to-reschedule-dialog.tsx. Shown
+  // unconditionally for any upcoming booking rather than only when one is
+  // known to be pending, since there's no endpoint to discover that first —
+  // see that dialog's own note.
+  onRespondToReschedule: (booking: Booking) => void;
 }) {
   const router = useRouter();
   const status = STATUS_STYLE[booking.bookingStatus];
@@ -130,6 +136,16 @@ export function BookingCard({
             {cancelling ? "Cancelling…" : "Cancel"}
           </Button>
         </div>
+      )}
+
+      {isUpcoming && (
+        <button
+          type="button"
+          onClick={() => onRespondToReschedule(booking)}
+          className="mt-2 w-full text-center text-xs text-muted-foreground underline underline-offset-2"
+        >
+          Respond to a reschedule request
+        </button>
       )}
     </Card>
   );

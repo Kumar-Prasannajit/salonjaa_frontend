@@ -9,6 +9,7 @@ import { useAccountContext } from "@/hooks/account-context";
 import { useToastContext } from "@/hooks/toast-context";
 import { BookingCard } from "@/components/booking-card";
 import { CancelBookingDialog } from "@/components/cancel-booking-dialog";
+import { RespondToRescheduleDialog } from "@/components/respond-to-reschedule-dialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,13 +22,17 @@ const TABS = [
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
-// docs/designs/12-user-bookings.jpeg. GET /bookings/my-bookings takes a
-// single optional status filter, but the design's 3 tabs need PENDING+APPROVED
-// merged into "Upcoming" — fetched once, unfiltered (no pagination is
-// documented for this endpoint either, same precedent as Reviews), then
-// bucketed client-side. EXPIRED bookings (the booking-expiry worker's
-// terminal state, PROGRESS.md's Module 6) are folded into "Cancelled" —
-// closest end-state in spirit, there's no 4th tab in the design for it.
+// docs/designs/12-user-bookings.jpeg. Module 15 — reads from
+// GET /users/me/bookings now (was /bookings/my-bookings, still live and
+// functionally identical — frontend_handover.md calls this "effectively an
+// alias over the same data under the documented /users/me path"), adopting
+// the documented route. Takes a single optional status filter, but the
+// design's 3 tabs need PENDING+AWAITING_PAYMENT+APPROVED merged into
+// "Upcoming" — fetched once, unfiltered (no pagination is documented for
+// this endpoint either, same precedent as Reviews), then bucketed
+// client-side. EXPIRED bookings (the booking-expiry worker's terminal
+// state, PROGRESS.md's Module 6) are folded into "Cancelled" — closest
+// end-state in spirit, there's no 4th tab in the design for it.
 export default function BookingsPage() {
   const account = useAccountContext();
   const router = useRouter();
@@ -44,11 +49,15 @@ export default function BookingsPage() {
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState("");
 
+  const [rescheduleTarget, setRescheduleTarget] = useState<Booking | null>(null);
+  const [rescheduleBusy, setRescheduleBusy] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState("");
+
   const loadBookings = async () => {
     setError("");
     try {
       const [bookingsResult, paymentsResult] = await Promise.all([
-        apiFetch<{ data: Booking[] }>("/bookings/my-bookings"),
+        apiFetch<{ data: Booking[] }>("/users/me/bookings"),
         // Needed only so an already-paid APPROVED booking stops offering "Pay
         // Now" — bookingStatus alone never changes on successful payment.
         apiFetch<{ data: Payment[] }>("/payments/my-payments"),
@@ -110,6 +119,44 @@ export default function BookingsPage() {
       toast.error(msg);
     } finally {
       setCancelBusy(false);
+    }
+  };
+
+  const acceptReschedule = async () => {
+    if (!rescheduleTarget) return;
+    setRescheduleBusy(true);
+    setRescheduleError("");
+    try {
+      await apiFetch(`/bookings/${rescheduleTarget.id}/approve-reschedule`, { method: "POST" });
+      setRescheduleTarget(null);
+      toast.success("Reschedule accepted.");
+      await loadBookings();
+    } catch (e) {
+      const msg = messageFromError(e);
+      setRescheduleError(msg);
+      toast.error(msg);
+    } finally {
+      setRescheduleBusy(false);
+    }
+  };
+
+  const declineReschedule = async (reason: string) => {
+    if (!rescheduleTarget) return;
+    setRescheduleBusy(true);
+    setRescheduleError("");
+    try {
+      const body: Record<string, string> = {};
+      if (reason) body.reason = reason;
+      await apiFetch(`/bookings/${rescheduleTarget.id}/reject-reschedule`, { method: "POST", body: JSON.stringify(body) });
+      setRescheduleTarget(null);
+      toast.success("Reschedule declined.");
+      await loadBookings();
+    } catch (e) {
+      const msg = messageFromError(e);
+      setRescheduleError(msg);
+      toast.error(msg);
+    } finally {
+      setRescheduleBusy(false);
     }
   };
 
@@ -179,6 +226,7 @@ export default function BookingsPage() {
             paid={paidBookingIds.has(b.id)}
             onCancel={setCancelTarget}
             cancelling={cancelBusy && cancelTarget?.id === b.id}
+            onRespondToReschedule={setRescheduleTarget}
           />
         ))}
       </div>
@@ -191,6 +239,18 @@ export default function BookingsPage() {
         onClose={() => {
           setCancelTarget(null);
           setCancelError("");
+        }}
+      />
+
+      <RespondToRescheduleDialog
+        booking={rescheduleTarget}
+        busy={rescheduleBusy}
+        error={rescheduleError}
+        onAccept={acceptReschedule}
+        onDecline={declineReschedule}
+        onClose={() => {
+          setRescheduleTarget(null);
+          setRescheduleError("");
         }}
       />
     </main>
