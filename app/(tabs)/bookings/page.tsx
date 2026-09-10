@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarOff, Lock } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
-import type { Booking, BookingDetail, Payment } from "@/lib/types";
+import type { Booking, BookingDetail, CancellationReasonCode, Payment } from "@/lib/types";
 import { useAccountContext } from "@/hooks/account-context";
 import { useToastContext } from "@/hooks/toast-context";
 import { BookingCard } from "@/components/booking-card";
@@ -106,12 +106,14 @@ export default function BookingsPage() {
     });
   }, [activeList]);
 
-  const confirmCancel = async (reason: string) => {
+  const confirmCancel = async (reasonCode: CancellationReasonCode, reason: string) => {
     if (!cancelTarget) return;
     setCancelBusy(true);
     setCancelError("");
     try {
-      await apiFetch(`/bookings/${cancelTarget.id}/cancel`, { method: "POST", body: JSON.stringify({ reason }) });
+      const body: Record<string, string> = { reasonCode };
+      if (reason) body.reason = reason;
+      await apiFetch(`/bookings/${cancelTarget.id}/cancel`, { method: "POST", body: JSON.stringify(body) });
       setCancelTarget(null);
       toast.success("Booking cancelled.");
       await loadBookings();
