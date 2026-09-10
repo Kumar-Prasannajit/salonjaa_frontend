@@ -226,19 +226,21 @@ This checklist assumes **all 8 pending module branches (15, 16, 17, 19, 20, 21, 
 
 | Section | Pass / Fail | Notes |
 |---|---|---|
-| 1. Auth | | |
-| 2. Profile & Addresses | | |
-| 3. Browse | | |
-| 4. Booking creation | | |
-| 5. Strikes / advance payment | | |
-| 6. Cancellation & reschedule | | |
-| 7. Payment | | |
-| 8. Reviews | | |
-| 9. Wallet | | |
-| 10. Claim a walk-in | | |
-| 11. Owner — Salon & Branch | | |
-| 12. Owner — Staff & Services | | |
-| 13. Owner — Bookings | | |
-| 14. Owner — Promotions & Analytics | | |
-| 15. Admin | | |
-| 16. Cross-role scenarios | | |
+| 1. Auth | PASS | 6/6. Reload-persists-session behavior contradicts a stale CLAUDE.md comment (real cookie-restore exists) — doc issue, not a bug. |
+| 2. Profile & Addresses | PASS | Auth-guard reload-redirect race found & fixed (`authChecked`). Name-prompt-not-on-Profile is documented/intentional, not a bug. |
+| 3. Browse | PASS | One chip category legitimately has 0 seeded services (confirmed via API, not a bug). Gender/promo badges deferred to §11/§14, later confirmed there. |
+| 4. Booking creation | PASS | Full pass incl. Module 22 variants + staff-leave conflict handling. Confirms BullMQ/Redis jobs genuinely running (auto-expiry observed). |
+| 5. Strikes / advance payment | PASS | Full lifecycle verified with real payments: strikes recorded → advance required → owner blocked pre-payment → advance paid → owner approves → cancel-with-advance forfeits to wallet. Found & fixed a "Paid" badge bug (see below). |
+| 6. Cancellation & reschedule | PASS | Free cancel, 2h-cutoff (client+server), reschedule request/respond both directions, and the non-proposer-can't-self-approve 404 all verified live. |
+| 7. Payment | PASS | Full real-money-flow verified live via Razorpay test mode: success, dismiss→FAILED→retry→SUCCESS, sequential double-attempt 409. Found a genuine backend race in concurrent `create-order` calls (flagged, not fixed here — see KNOWN_BACKEND_LIMITATIONS.md). Bad-signature path not independently reachable via UI automation. |
+| 8. Reviews | PASS w/ backend bug found | Create/edit/report/owner-reply all functionally verified. Found: no frontend UI for owner-reply (needs building), and a real backend bug — replies are never returned by any review list endpoint, so they're invisible to customers even once posted. See KNOWN_BACKEND_LIMITATIONS.md. |
+| 9. Wallet | PASS | Balance/transactions verified with real CREDIT rows (ADVANCE_FORFEITURE, REFUND_APPROVED) in correct newest-first order. Envelope-unwrap bug found & fixed. |
+| 10. Claim a walk-in | PASS | Full pass incl. the "pay online" checkbox path (claim → AWAITING_PAYMENT/ONLINE → real payment → APPROVED). |
+| 11. Owner — Salon & Branch | PASS | Create/edit salon & branch, holidays and capacity override both verified to actually change `GET /availability/slots` output (not just accept form input). `genderServed` field was missing entirely — added. |
+| 12. Owner — Staff & Services | PASS | Staff CRUD/leave, service CRUD, and Module 22 variant CRUD (owner UI was entirely missing — built from scratch) all verified. |
+| 13. Owner — Bookings | PASS | Filter/approve/reject/no-show/walk-in-creation all verified. |
+| 14. Owner — Promotions & Analytics | PASS | Promotion create/featured-flag verified against both the branch detail list and the listing-card banner. Salon Details page wasn't rendering promotions at all — fixed. |
+| 15. Admin | PASS | Salon verify/reject/suspend/reactivate, refunds approve/reject, complaints resolve, reports overview all verified live with real notifications logged. Found & fixed a stale "no money moves" refund-approve dialog (Module 20 actually credits the wallet now). |
+| 16. Cross-role scenarios | PASS | All 6 verified, including a genuine two-session race condition (real concurrent requests, two distinct customer sessions) for the last-slot race. Found a backend gap: a claimed walk-in never updates its display name/phone, so it still looks anonymous to the owner. |
+
+See `docs/E2E_TEST_RESULTS.md` for the full detailed report (bugs found/fixed with commits, and every backend gap flagged).
