@@ -8,11 +8,19 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 // capacity). Lost on reload, same as the auth tokens in lib/api-client.ts;
 // that's an accepted tradeoff for a multi-step flow with no server-side
 // "draft" resource anywhere in the API.
+// Module 22 — variantId/variantName are null when the service has no
+// variants (or a "no variant" bare-string booking is genuinely intended).
+// `price` is the effective price to charge/display (the chosen variant's
+// price when set, basePrice otherwise) — always use this for totals, never
+// basePrice directly, since a variant overrides price only.
 export type DraftService = {
   id: string;
   name: string;
   durationMinutes: number;
   basePrice: number;
+  variantId: string | null;
+  variantName: string | null;
+  price: number;
 };
 
 export type BookingDraft = {

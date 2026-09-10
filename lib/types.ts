@@ -82,8 +82,20 @@ export type PublicBranchSummary = {
   activePromotion: { title: string; bannerImageUrl: string | null } | null;
 };
 
+// Module 22 — GET /public/branches/:branchId's per-service variants[] (e.g.
+// "Short Hair"/"Long Hair" at different prices). A variant overrides price
+// only — duration always comes from the parent service's durationMinutes.
+export type ServiceVariant = {
+  id: string;
+  name: string;
+  price: number;
+};
+
 // GET /public/branches/:branchId embedded service row — no `status` field,
 // the backend only ever returns bookable (ACTIVE) services here.
+// `variants` is new (Module 22): empty means book directly with basePrice
+// (unchanged); non-empty means picking one is required — see
+// app/salons/[branchId]/services/page.tsx's variant picker.
 export type PublicService = {
   id: string;
   categoryId: string;
@@ -92,6 +104,7 @@ export type PublicService = {
   durationMinutes: number;
   basePrice: number;
   imageUrl: string | null;
+  variants: ServiceVariant[];
 };
 
 // GET /public/branches/:branchId response (Module 10) — Salon Details +
@@ -238,9 +251,14 @@ export type Booking = {
 export type CancellationReasonCode = "NEED_HELP" | "TOOK_TOO_LONG_TO_CONFIRM" | "BOOKED_BY_MISTAKE" | "BOOKED_ELSEWHERE" | "OTHER";
 
 // GET /bookings/:id embeds this — the list endpoint above does not.
+// variantId/variantName are new (Module 22) — both null when no variant was
+// involved; `price` is already the effective price (the variant's price when
+// one was selected, basePrice otherwise).
 export type BookingServiceLine = {
   serviceId: string;
   serviceName: string;
+  variantId: string | null;
+  variantName: string | null;
   durationMinutes: number;
   price: number;
   quantity: number;

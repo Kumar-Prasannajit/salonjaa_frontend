@@ -194,6 +194,7 @@ export default function ReviewBookingPage() {
         {booking.services.map((s) => (
           <p key={s.serviceId} className="text-muted-foreground">
             {s.serviceName}
+            {s.variantName ? ` — ${s.variantName}` : ""}
           </p>
         ))}
       </Card>

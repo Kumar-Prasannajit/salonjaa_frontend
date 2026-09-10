@@ -68,7 +68,10 @@ export default function BookingConfirmedPage() {
         <div className="space-y-1 p-4">
           {booking.services.map((s) => (
             <div key={s.serviceId} className="flex justify-between text-sm">
-              <span>{s.serviceName}</span>
+              <span>
+                {s.serviceName}
+                {s.variantName && <span className="text-muted-foreground"> — {s.variantName}</span>}
+              </span>
               <span>₹{s.price}</span>
             </div>
           ))}

@@ -85,8 +85,11 @@ export default function BookingRequestedPage() {
         <div className="space-y-1 p-4">
           {draft.services.map((s) => (
             <div key={s.id} className="flex justify-between text-sm">
-              <span>{s.name}</span>
-              <span>₹{s.basePrice}</span>
+              <span>
+                {s.name}
+                {s.variantName && <span className="text-muted-foreground"> — {s.variantName}</span>}
+              </span>
+              <span>₹{s.price}</span>
             </div>
           ))}
         </div>
