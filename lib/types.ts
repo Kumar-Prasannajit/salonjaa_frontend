@@ -209,7 +209,10 @@ export type BookingCreateResult = {
 // Module 16 — NO_SHOW added: POST /salon-bookings/:id/no-show moves an
 // APPROVED booking here any time at/after its scheduled start, recording a
 // customer strike automatically.
-export type BookingStatus = "PENDING" | "AWAITING_PAYMENT" | "APPROVED" | "CANCELLED" | "COMPLETED" | "EXPIRED" | "NO_SHOW";
+// BUG-008 fix — REJECTED was missing here even though the backend has always been able to
+// return it (POST /salon-bookings/:id/reject's terminal state) — see booking-card.tsx and
+// app/(tabs)/bookings/page.tsx's buckets for the display-side fix this type change unblocks.
+export type BookingStatus = "PENDING" | "AWAITING_PAYMENT" | "APPROVED" | "REJECTED" | "CANCELLED" | "COMPLETED" | "EXPIRED" | "NO_SHOW";
 
 export type Booking = {
   id: string;
@@ -268,6 +271,24 @@ export type Booking = {
   // scoping (read endpoints only, null on mutation-confirmation responses).
   // Closes the "Call Salon" gap.
   branchPhone: string | null;
+  // BUG-009 fix — the booking's latest PENDING reschedule request, if any (same "read
+  // endpoints only, null on mutation-confirmation responses" scoping as salonName/etc. above).
+  pendingReschedule: RescheduleRequest | null;
+};
+
+// BUG-009 fix — shape of Booking.pendingReschedule and of the response from
+// POST /bookings/:id/reschedule-request, /approve-reschedule, /reject-reschedule, and
+// POST /salon-bookings/:id/propose-reschedule.
+export type RescheduleRequest = {
+  id: string;
+  bookingId: string;
+  requestedBy: "CUSTOMER" | "SALON";
+  oldScheduledStart: string;
+  oldScheduledEnd: string;
+  newScheduledStart: string;
+  newScheduledEnd: string;
+  reason: string | null;
+  status: string;
 };
 
 // POST /bookings/:id/cancel's optional reasonCode (Module 19) — a fixed

@@ -38,13 +38,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 //    wallet balance is fetched once authenticated to disable it upfront
 //    rather than let the customer hit that 422 blind.
 //
-// The coupon-validate call is real and live, but its result is *informational
-// only*: no documented endpoint anywhere attaches a coupon to a booking (POST
-// /bookings has no couponCode field), so a validated discount is never
-// actually deducted from what payment will later charge. Showing a
-// discounted "Total" here would misrepresent the real charge, so the
-// subtotal shown is never adjusted by it — the coupon card just confirms
-// validity and states plainly that it isn't applied yet.
+// BUG-005 fix — Module 12 (see ../../../../KNOWN_BACKEND_LIMITATIONS.md) made this real:
+// POST /bookings now accepts an optional couponCode and snapshots a real discountAmount onto
+// the booking. The comment block above described the old state (validate-only, never
+// attached) — confirmBooking() below now sends couponCode when a coupon has been validated,
+// and the summary card shows the resulting Subtotal/Discount/Total instead of a flat
+// undiscounted total plus a "preview only" disclaimer.
 export default function CheckoutPage() {
   const { branchId } = useParams<{ branchId: string }>();
   const router = useRouter();
@@ -129,6 +128,11 @@ export default function CheckoutPage() {
         paymentMethod,
       };
       if (draft.staffId) body.staffId = draft.staffId;
+      // BUG-005 fix — only sent once the code has actually been validated against this
+      // subtotal (couponResult.valid), never the raw typed text — if the customer edits the
+      // code after validating, couponResult is cleared below so a stale/unvalidated code can't
+      // slip through.
+      if (couponResult?.valid) body.couponCode = couponCode;
 
       const result = await apiFetch<BookingCreateResult>("/bookings", { method: "POST", body: JSON.stringify(body) });
       router.push(`/book/${branchId}/requested?bookingId=${result.bookingId}&status=${result.status}&paymentMethod=${paymentMethod}`);
@@ -210,9 +214,21 @@ export default function CheckoutPage() {
                   </span>
                 </div>
               </div>
-              <div className="flex justify-between p-4 text-base font-semibold">
-                <span>Subtotal</span>
-                <span>₹{subtotal}</span>
+              <div className="space-y-1 p-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>₹{subtotal}</span>
+                </div>
+                {couponResult?.valid && (
+                  <div className="flex justify-between text-sm text-success">
+                    <span>Discount ({couponCode})</span>
+                    <span>-₹{couponResult.discount}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-semibold">
+                  <span>Total</span>
+                  <span>₹{Math.max(0, subtotal - (couponResult?.valid ? couponResult.discount : 0))}</span>
+                </div>
               </div>
             </Card>
 
@@ -279,7 +295,10 @@ export default function CheckoutPage() {
               <div className="mt-2 flex gap-2">
                 <Input
                   value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value.toUpperCase());
+                    setCouponResult(null);
+                  }}
                   placeholder="Enter coupon code"
                   className="flex-1"
                 />
@@ -292,11 +311,7 @@ export default function CheckoutPage() {
                 <div className="mt-2 flex items-start gap-2 text-sm text-success">
                   <Check className="mt-0.5 size-4 shrink-0" />
                   <p>
-                    {couponCode} is valid — ₹{couponResult.discount} off.{" "}
-                    <span className="text-muted-foreground">
-                      Not deducted here — there&apos;s no way to attach a coupon to a booking yet, so this is a preview only. The final
-                      payable amount is set once the salon approves and payment opens.
-                    </span>
+                    {couponCode} applied — ₹{couponResult.discount} off. <span className="text-muted-foreground">Reflected in the total above.</span>
                   </p>
                 </div>
               )}

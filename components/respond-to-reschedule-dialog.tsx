@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Booking } from "@/lib/types";
+import { formatDateTime } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,14 +16,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // components/booking-card.tsx and components/owner/salon-booking-card.tsx,
 // same "dumb dialog, parent owns the fetch" split as CancelBookingDialog.
 //
-// Known gap (see docs/KNOWN_BACKEND_LIMITATIONS.md): there's no GET endpoint
-// anywhere to fetch a booking's pending reschedule request, so this can't
-// show *what* was proposed (new date/time) before the responder decides —
-// only that responding is possible. The responder finds those details from
-// the email notification sent when the request was created. Calling either
-// action with nothing actually pending 404s with a clear message ("No
-// pending reschedule request for this booking"), shown as-is via `error`
-// rather than papered over.
+// BUG-009 fix — BookingDTO now carries pendingReschedule (see lib/types.ts), so this can
+// finally show what's actually being proposed (new date/time, reason) before the responder
+// decides, instead of only pointing at the email notification. Falls back to that old copy
+// only if somehow opened with no pendingReschedule on the booking (shouldn't happen now that
+// both booking-card.tsx and salon-booking-card.tsx only open this when one is present).
 export function RespondToRescheduleDialog({
   booking,
   busy,
@@ -38,6 +36,7 @@ export function RespondToRescheduleDialog({
   onDecline: (reason: string) => void;
   onClose: () => void;
 }) {
+  const request = booking?.pendingReschedule;
   const [mode, setMode] = useState<"choose" | "declining">("choose");
   const [reason, setReason] = useState("");
 
@@ -55,10 +54,20 @@ export function RespondToRescheduleDialog({
           <DialogTitle>Respond to Reschedule Request</DialogTitle>
         </DialogHeader>
 
-        <p className="text-sm text-muted-foreground">
-          If the other party has proposed a new date/time for {booking?.bookingNumber}, you can accept or decline it here — check the
-          notification you were sent for what&apos;s being proposed, since there&apos;s no way to preview it in-app before deciding.
-        </p>
+        {request ? (
+          <div className="space-y-1 text-sm">
+            <p className="text-muted-foreground">
+              New time proposed for <span className="font-medium text-foreground">{booking?.bookingNumber}</span>:
+            </p>
+            <p className="font-medium">{formatDateTime(request.newScheduledStart)}</p>
+            {request.reason && <p className="text-muted-foreground">Reason: {request.reason}</p>}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            If the other party has proposed a new date/time for {booking?.bookingNumber}, you can accept or decline it here — check the
+            notification you were sent for what&apos;s being proposed, since there&apos;s no way to preview it in-app before deciding.
+          </p>
+        )}
 
         {error && (
           <Alert variant="destructive">

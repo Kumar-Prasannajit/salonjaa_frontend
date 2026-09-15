@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight, WalletIcon } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
-import { useAccountContext } from "@/hooks/account-context";
 import type { Wallet, WalletTransaction } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RoleGuard } from "@/components/role-guard";
 
 const REASON_LABEL: Record<WalletTransaction["reason"], string> = {
   BOOKING_PAYMENT: "Booking Payment",
@@ -24,24 +24,29 @@ const REASON_LABEL: Record<WalletTransaction["reason"], string> = {
 // WALLET payment method at Checkout. No withdrawal, no expiry. No tab bar
 // (drill-in from Profile, not a bottom-nav destination), redirects to
 // /profile if signed out, same pattern as app/profile/addresses/page.tsx.
+//
+// BUG-002 fix — GET /wallet is CUSTOMER-only (requireRole(CUSTOMER)); signed in with any other
+// role (or signed out) used to render its raw "Requires one of roles: CUSTOMER" 403 body
+// straight into the Alert below. Wrapped in RoleGuard now, same access-denied/sign-in-required
+// treatment app/owner and app/admin already get — WalletContent (and its /wallet fetch) only
+// ever mounts once the CUSTOMER check has passed, so that 403 can't happen through normal
+// navigation any more.
 export default function WalletPage() {
-  const account = useAccountContext();
+  return (
+    <RoleGuard role="CUSTOMER">
+      <WalletContent />
+    </RoleGuard>
+  );
+}
+
+function WalletContent() {
   const router = useRouter();
 
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[] | null>(null);
   const [error, setError] = useState("");
 
-  // Gated on authChecked too — otherwise this fires on the initial
-  // isAuthenticated:false before useAccount's mount-time cookie-restore has
-  // resolved, bouncing an actually-still-signed-in visitor (e.g. a hard
-  // reload of this page) straight back to /profile.
   useEffect(() => {
-    if (account.authChecked && !account.isAuthenticated) router.replace("/profile");
-  }, [account.authChecked, account.isAuthenticated, router]);
-
-  useEffect(() => {
-    if (!account.isAuthenticated) return;
     setError("");
     Promise.all([apiFetch<{ data: Wallet }>("/wallet"), apiFetch<{ data: WalletTransaction[] }>("/wallet/transactions")])
       .then(([walletResult, txResult]) => {
@@ -49,9 +54,7 @@ export default function WalletPage() {
         setTransactions(txResult.data);
       })
       .catch((e) => setError(messageFromError(e)));
-  }, [account.isAuthenticated]);
-
-  if (!account.isAuthenticated) return null;
+  }, []);
 
   return (
     <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">

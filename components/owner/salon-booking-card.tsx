@@ -28,39 +28,52 @@ export function SalonBookingCard({
   onReject,
   onRespondToReschedule,
   onNoShow,
+  onComplete,
   busy,
 }: {
   booking: Booking;
   onApprove: (b: Booking) => void;
   onReject: (b: Booking) => void;
-  // Module 15 — opens components/respond-to-reschedule-dialog.tsx. Shown
-  // unconditionally alongside Propose Reschedule rather than only when one
-  // is known to be pending, since there's no endpoint to discover that
-  // first — see that dialog's own note.
+  // Module 15 / BUG-009 fix — opens components/respond-to-reschedule-dialog.tsx. Only
+  // shown/enabled now when booking.pendingReschedule is actually set (see below) — the old
+  // "always show it, blind" workaround is gone now that the real field exists.
   onRespondToReschedule: (b: Booking) => void;
   // Module 16 — POST /salon-bookings/:id/no-show ({} body). Errors: 400 too
   // early (before scheduledStart), 409 if not APPROVED — the client-side
   // gate below (canMarkNoShow) gets both cases right without a round trip.
   onNoShow: (b: Booking) => void;
+  // BUG-007 fix — POST /salon-bookings/:id/complete ({} body). Same client-side timing gate
+  // as no-show (canMarkNoShow/canMarkComplete: only at/after scheduledStart), and the backend
+  // itself 409s if it's not still APPROVED.
+  onComplete: (b: Booking) => void;
   busy: boolean;
 }) {
   const router = useRouter();
   const status = STATUS_STYLE[booking.bookingStatus] || { label: booking.bookingStatus, className: "text-muted-foreground" };
+  const pendingReschedule = booking.pendingReschedule;
+  // BUG-009/BUG-010 fix — the booking is frozen for every owner decision (Approve, Reject,
+  // Propose Reschedule) while a reschedule request from either direction is still pending;
+  // the backend now 409s on all three the same way, this just keeps the buttons from ever
+  // being clicked into that 409 in the first place.
+  const frozenForReschedule = !!pendingReschedule;
   // Approve/reject only ever apply to a still-PENDING booking (the backend
   // 409s otherwise) — an AWAITING_PAYMENT one has already been approved and
   // is just waiting on the customer's online payment. Reschedule stays
   // available through that window too: Module 14b keeps AWAITING_PAYMENT
   // capacity-consuming exactly like APPROVED, and proposeReschedule's own
   // isCapacityConsuming check allows it.
-  const canDecide = booking.bookingStatus === "PENDING";
+  const canDecide = booking.bookingStatus === "PENDING" && !frozenForReschedule;
   const canReschedule =
-    booking.bookingStatus === "PENDING" || booking.bookingStatus === "AWAITING_PAYMENT" || booking.bookingStatus === "APPROVED";
+    !frozenForReschedule &&
+    (booking.bookingStatus === "PENDING" || booking.bookingStatus === "AWAITING_PAYMENT" || booking.bookingStatus === "APPROVED");
   // Module 16 — a restricted customer's advance must clear before Approve
   // works (409 otherwise); the owner can't see payment status directly
   // (no owner-facing payments list for one customer's booking), so this is
   // informational rather than a hard client-side block on the button.
   const advancePending = booking.bookingStatus === "PENDING" && booking.requiresAdvancePayment;
   const canMarkNoShow = booking.bookingStatus === "APPROVED" && new Date(booking.scheduledStart).getTime() <= Date.now();
+  // BUG-007 fix — the only manual way to reach COMPLETED; same gate as no-show.
+  const canMarkComplete = booking.bookingStatus === "APPROVED" && new Date(booking.scheduledStart).getTime() <= Date.now();
 
   return (
     <Card className="p-4">
@@ -98,7 +111,17 @@ export function SalonBookingCard({
         </p>
       )}
 
-      {(canDecide || canReschedule || canMarkNoShow) && (
+      {/* BUG-009 fix — real proposal details now that BookingDTO carries pendingReschedule,
+          instead of the old blind "Respond to a reschedule request" link shown on every card. */}
+      {pendingReschedule && (
+        <div className="mt-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+          {pendingReschedule.requestedBy === "CUSTOMER"
+            ? `Customer requested a reschedule to ${formatDateTime(pendingReschedule.newScheduledStart)}.`
+            : `Your reschedule proposal to ${formatDateTime(pendingReschedule.newScheduledStart)} is awaiting the customer's response.`}
+        </div>
+      )}
+
+      {(canDecide || canReschedule || canMarkNoShow || canMarkComplete) && (
         <div className="mt-4 flex flex-wrap gap-2">
           {canDecide && (
             <>
@@ -120,16 +143,24 @@ export function SalonBookingCard({
               Mark No-Show
             </Button>
           )}
+          {canMarkComplete && (
+            <Button size="sm" variant="outline" className="flex-1" disabled={busy} onClick={() => onComplete(booking)}>
+              Mark Complete
+            </Button>
+          )}
         </div>
       )}
 
-      {canReschedule && (
+      {/* BUG-009 fix — only shown/usable now when the customer is the one who proposed it
+          (the owner is the responder in that direction); a salon-proposed one just shows the
+          "awaiting response" badge above, since the owner can't respond to their own proposal. */}
+      {pendingReschedule?.requestedBy === "CUSTOMER" && (
         <button
           type="button"
           onClick={() => onRespondToReschedule(booking)}
           className="mt-2 w-full text-center text-xs text-muted-foreground underline underline-offset-2"
         >
-          Respond to a reschedule request
+          Respond to reschedule request
         </button>
       )}
     </Card>

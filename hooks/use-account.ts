@@ -50,6 +50,9 @@ export function useAccount() {
   useEffect(() => subscribeTokens((t) => setRoles(decodeJwtRoles(t?.accessToken))), []);
   const isSalonOwner = roles.includes("SALON_OWNER");
   const isAdmin = roles.includes("ADMIN");
+  // BUG-002 fix — lets RoleGuard cover CUSTOMER-only routes too (e.g. /profile/wallet), same
+  // pattern as the two above.
+  const isCustomer = roles.includes("CUSTOMER");
 
   useEffect(() => {
     if (!cooldown) return;
@@ -345,6 +348,7 @@ export function useAccount() {
     roles,
     isSalonOwner,
     isAdmin,
+    isCustomer,
     initials,
     busy,
     cooldown,

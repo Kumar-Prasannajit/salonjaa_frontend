@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Building2, CreditCard, Info, Lock, Smartphone, Wallet } from "lucide-react";
+import { ArrowLeft, Info, Lock } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import { openRazorpayCheckout } from "@/lib/razorpay";
 import { useToastContext } from "@/hooks/toast-context";
@@ -11,13 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const METHODS = [
-  { key: "upi", icon: Smartphone, label: "UPI", description: "Pay using any UPI app" },
-  { key: "card", icon: CreditCard, label: "Cards", description: "Visa, Mastercard, RuPay" },
-  { key: "wallet", icon: Wallet, label: "Wallets", description: "PhonePe, Paytm, Amazon Pay" },
-  { key: "netbanking", icon: Building2, label: "Net Banking", description: "All major banks" },
-] as const;
 
 // docs/designs/09-payment-mode.jpeg. POST /payments/create-order requires
 // the booking to be AWAITING_PAYMENT (Module 14b — was APPROVED before that
@@ -33,10 +26,11 @@ const METHODS = [
 // — this page only needs to gate on it and adjust copy/amount shown, the
 // actual pay()/verifyPayment() calls are unchanged either way.
 //
-// Razorpay's Standard Checkout widget provides its own payment-method UI
-// once opened — the method cards below aren't a substitute for that, they
-// set `prefill.method` so the widget opens on the tab the customer already
-// picked (Razorpay lets them switch inside the widget regardless).
+// GAP-002 fix — the design's UPI/Card/Wallet/Netbanking method picker is gone. It only ever
+// set Razorpay's `prefill.method` (which tab its own widget opens on first) — the widget
+// always shows its full method-selection UI regardless and the customer could already switch
+// inside it either way, so the picker was a duplicate selection step with no real effect.
+// Straight to a single "Pay ₹X" action that opens Razorpay directly, no prefill.
 export default function PayBookingPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
@@ -46,7 +40,6 @@ export default function PayBookingPage() {
   const [loadError, setLoadError] = useState("");
   const [hasSuccessfulPayment, setHasSuccessfulPayment] = useState(false);
 
-  const [method, setMethod] = useState<(typeof METHODS)[number]["key"]>("upi");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [dismissedNotice, setDismissedNotice] = useState(false);
@@ -85,7 +78,6 @@ export default function PayBookingPage() {
         name: "Salonjaa",
         description: booking.bookingNumber,
         order_id: order.orderId,
-        prefill: { method },
         theme: { color: "#d9a044" },
         handler: (response) => verifyPayment(order.orderId, response.razorpay_payment_id, response.razorpay_signature),
         modal: {
@@ -207,27 +199,16 @@ export default function PayBookingPage() {
               </AlertDescription>
             </Alert>
           )}
-          <p className="text-sm font-medium">Select Payment Method</p>
-          <div className="space-y-3">
-            {METHODS.map(({ key, icon: Icon, label, description }) => (
-              <Card
-                key={key}
-                onClick={() => setMethod(key)}
-                className={`cursor-pointer flex-row items-center gap-3 p-4 transition-colors ${
-                  method === key ? "border-primary" : "border-border"
-                }`}
-              >
-                <div className="grid size-10 place-items-center rounded-lg border border-primary/40 bg-primary/10">
-                  <Icon className="size-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">{label}</p>
-                  <p className="text-sm text-muted-foreground">{description}</p>
-                </div>
-                <div className={`grid size-5 place-items-center rounded-full border ${method === key ? "border-primary bg-primary" : "border-border"}`} />
-              </Card>
-            ))}
-          </div>
+          <Card className="p-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Booking</span>
+              <span className="font-medium">{booking.bookingNumber}</span>
+            </div>
+            <div className="mt-2 flex justify-between text-base font-semibold">
+              <span>{advanceDue ? "Advance Due" : "Total Payable"}</span>
+              <span>₹{amountDue}</span>
+            </div>
+          </Card>
 
           {dismissedNotice && (
             <Alert>

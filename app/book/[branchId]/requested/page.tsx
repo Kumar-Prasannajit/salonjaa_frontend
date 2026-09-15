@@ -9,6 +9,7 @@ import type { BookingDetail } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Stands in for docs/designs/10-booking-confirmed.jpeg, but deliberately not
 // that screen: POST /bookings only ever creates a PENDING booking (see
@@ -20,8 +21,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 //
 // Module 16 — POST /bookings' own response has no requiresAdvancePayment/
 // advanceAmount fields (frontend_handover.md: "visible via GET /bookings/:id"
-// only), so a PAY_AT_SALON request fetches the booking detail once landed
-// here to check for it, rather than only surfacing it later in My Bookings.
+// only), so a PAY_AT_SALON request checks the fetched booking detail below for it, rather
+// than only surfacing it later in My Bookings.
+//
+// BUG-006 fix — that same GET /bookings/:id fetch is now unconditional (was PAY_AT_SALON-only)
+// and drives the summary card's services/Subtotal/Discount/Total, instead of the card reading
+// draft.services (the local pre-checkout cart, no subtotal row at all) as if it were the real
+// created booking.
 export default function BookingRequestedPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,6 +38,12 @@ export default function BookingRequestedPage() {
   const paymentMethod = searchParams.get("paymentMethod");
 
   const [advanceAmount, setAdvanceAmount] = useState<number | null>(null);
+  // BUG-006 fix — GET /bookings/:id already returns subtotalAmount/discountAmount/
+  // totalAmount (BUG-005's real coupon attachment lands here too), but this page only ever
+  // read draft.services (the pre-checkout client-side cart) with no subtotal/total row. Now
+  // fetched unconditionally (not just for the PAY_AT_SALON advance check above it) so the
+  // summary card below can show what was actually created, not the local draft.
+  const [booking, setBooking] = useState<BookingDetail | null>(null);
 
   // Guard against landing here directly with no booking result — this page
   // only makes sense right after checkout/page.tsx's confirmBooking() redirect.
@@ -40,15 +52,16 @@ export default function BookingRequestedPage() {
   }, [bookingId, router]);
 
   useEffect(() => {
-    if (!bookingId || paymentMethod !== "PAY_AT_SALON") return;
+    if (!bookingId) return;
     apiFetch<{ booking: BookingDetail }>(`/bookings/${bookingId}`)
       .then(({ booking }) => {
-        if (booking.requiresAdvancePayment) setAdvanceAmount(booking.advanceAmount);
+        setBooking(booking);
+        if (paymentMethod === "PAY_AT_SALON" && booking.requiresAdvancePayment) setAdvanceAmount(booking.advanceAmount);
       })
       .catch(() => {
-        // Not fatal — the same advance-payment prompt is also surfaced from
-        // My Bookings (components/booking-card.tsx), so a failed check here
-        // just means the customer sees it there instead.
+        // Not fatal for the advance-payment prompt — that's also surfaced from My Bookings
+        // (components/booking-card.tsx). The summary card below falls back to draft.services
+        // (no pricing breakdown) when this fetch fails, same as its old unconditional behavior.
       });
   }, [bookingId, paymentMethod]);
 
@@ -83,15 +96,40 @@ export default function BookingRequestedPage() {
 
       <Card className="mt-6 divide-y divide-border p-0">
         <div className="space-y-1 p-4">
-          {draft.services.map((s) => (
-            <div key={s.id} className="flex justify-between text-sm">
-              <span>
-                {s.name}
-                {s.variantName && <span className="text-muted-foreground"> — {s.variantName}</span>}
-              </span>
-              <span>₹{s.price}</span>
-            </div>
-          ))}
+          {booking ? (
+            booking.services.map((s) => (
+              <div key={s.serviceId} className="flex justify-between text-sm">
+                <span>
+                  {s.serviceName}
+                  {s.variantName && <span className="text-muted-foreground"> — {s.variantName}</span>}
+                </span>
+                <span>₹{s.price}</span>
+              </div>
+            ))
+          ) : (
+            <>
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </>
+          )}
+          {booking && (
+            <>
+              <div className="flex justify-between pt-1 text-sm">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>₹{booking.subtotalAmount}</span>
+              </div>
+              {booking.discountAmount > 0 && (
+                <div className="flex justify-between text-sm text-success">
+                  <span>Discount</span>
+                  <span>-₹{booking.discountAmount}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-semibold">
+                <span>Total</span>
+                <span>₹{booking.totalAmount}</span>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex justify-between p-4 text-sm">
           <span className="text-muted-foreground">Professional</span>

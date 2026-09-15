@@ -150,6 +150,22 @@ export default function OwnerBookingsPage() {
     }
   };
 
+  // BUG-007 fix — POST /salon-bookings/:id/complete, {} body. Same
+  // window.confirm pattern as markNoShow above.
+  const markComplete = async (booking: Booking) => {
+    if (!window.confirm(`Mark ${booking.bookingNumber} as complete?`)) return;
+    setBusyId(booking.id);
+    try {
+      await apiFetch(`/salon-bookings/${booking.id}/complete`, { method: "POST", body: JSON.stringify({}) });
+      toast.success("Booking marked complete.");
+      await load(tab);
+    } catch (e) {
+      toast.error(messageFromError(e));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <main>
       <div className="flex items-center justify-between">
@@ -205,6 +221,7 @@ export default function OwnerBookingsPage() {
             onReject={setRejectTarget}
             onRespondToReschedule={setRescheduleTarget}
             onNoShow={markNoShow}
+            onComplete={markComplete}
           />
         ))}
       </div>

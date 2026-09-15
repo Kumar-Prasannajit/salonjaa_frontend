@@ -6,15 +6,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAccountContext } from "@/hooks/account-context";
 
-// Route-level protection for app/owner/* and app/admin/* — the "Owner
-// Dashboard"/"Admin Dashboard" links in the Profile menu only render when the
-// decoded role is present, but that's UI convenience, not security: this is
-// the actual gate, checked on every render of the protected layout, same as
-// how /bookings already nudges a signed-out visitor rather than 404ing.
-export function RoleGuard({ role, children }: { role: "SALON_OWNER" | "ADMIN"; children: React.ReactNode }) {
+// Route-level protection for app/owner/*, app/admin/*, and (BUG-002 fix)
+// app/profile/wallet — the "Owner Dashboard"/"Admin Dashboard" links in the
+// Profile menu only render when the decoded role is present, but that's UI
+// convenience, not security: this is the actual gate, checked on every
+// render of the protected layout, same as how /bookings already nudges a
+// signed-out visitor rather than 404ing.
+export function RoleGuard({ role, children }: { role: "SALON_OWNER" | "ADMIN" | "CUSTOMER"; children: React.ReactNode }) {
   const account = useAccountContext();
   const router = useRouter();
-  const roleLabel = role === "SALON_OWNER" ? "Salon Owner" : "Admin";
+  const roleLabel = role === "SALON_OWNER" ? "Salon Owner" : role === "ADMIN" ? "Admin" : "Customer";
+  const destination = role === "CUSTOMER" ? "this page" : "this dashboard";
 
   if (!account.isAuthenticated) {
     return (
@@ -24,7 +26,7 @@ export function RoleGuard({ role, children }: { role: "SALON_OWNER" | "ADMIN"; c
         </Card>
         <h1 className="text-xl font-semibold">Sign in required</h1>
         <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-          Sign in with an account that has {roleLabel} access to open this dashboard.
+          Sign in with an account that has {roleLabel} access to open {destination}.
         </p>
         <Button className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/profile")}>
           Go to Profile to sign in
@@ -33,7 +35,7 @@ export function RoleGuard({ role, children }: { role: "SALON_OWNER" | "ADMIN"; c
     );
   }
 
-  const hasRole = role === "SALON_OWNER" ? account.isSalonOwner : account.isAdmin;
+  const hasRole = role === "SALON_OWNER" ? account.isSalonOwner : role === "ADMIN" ? account.isAdmin : account.isCustomer;
   if (!hasRole) {
     return (
       <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-6 py-16 text-center">

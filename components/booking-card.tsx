@@ -42,6 +42,10 @@ const STATUS_STYLE: Record<Booking["bookingStatus"], { label: string; className:
   PENDING: { label: "Pending Approval", className: "text-primary" },
   AWAITING_PAYMENT: { label: "Payment Due", className: "text-primary" },
   APPROVED: { label: "Confirmed", className: "text-success" },
+  // BUG-008 fix — was entirely missing (bookingStatus type didn't even include REJECTED),
+  // which is why a rejected booking fell through every tab bucket and vanished from My
+  // Bookings — see app/(tabs)/bookings/page.tsx's buckets for the other half of the fix.
+  REJECTED: { label: "Rejected by Salon", className: "text-destructive" },
   COMPLETED: { label: "Completed", className: "text-success" },
   CANCELLED: { label: "Cancelled", className: "text-destructive" },
   EXPIRED: { label: "Expired", className: "text-muted-foreground" },
@@ -102,6 +106,7 @@ export function BookingCard({
   const status = STATUS_STYLE[booking.bookingStatus];
   const isUpcoming =
     booking.bookingStatus === "PENDING" || booking.bookingStatus === "AWAITING_PAYMENT" || booking.bookingStatus === "APPROVED";
+  const pendingReschedule = booking.pendingReschedule;
   // Module 16 — a restricted customer's PAY_AT_SALON booking needs this
   // settled before the salon can even review it, independent of the normal
   // AWAITING_PAYMENT flow above (which this booking's paymentMethod never
@@ -188,6 +193,16 @@ export function BookingCard({
         </p>
       )}
 
+      {/* BUG-009 fix — real proposal details now that BookingDTO carries pendingReschedule,
+          instead of the old blind "Respond to a reschedule request" link shown on every card. */}
+      {pendingReschedule && (
+        <div className="mt-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+          {pendingReschedule.requestedBy === "SALON"
+            ? `The salon proposed rescheduling to ${formatDateTime(pendingReschedule.newScheduledStart)} — respond below, or call the salon instead of proposing your own change.`
+            : `You requested a reschedule to ${formatDateTime(pendingReschedule.newScheduledStart)} — waiting on the salon to respond.`}
+        </div>
+      )}
+
       {booking.bookingStatus === "COMPLETED" && (
         <div className="mt-4 flex gap-2">
           <Button size="sm" className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push(`/bookings/${booking.id}/review`)}>
@@ -263,9 +278,13 @@ export function BookingCard({
               Advance Paid
             </span>
           )}
-          <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/bookings/${booking.id}/reschedule`)}>
-            Reschedule
-          </Button>
+          {/* BUG-009 fix — the backend now 409s a second reschedule request while one is
+              already pending (either direction); don't offer a button that would just hit it. */}
+          {!pendingReschedule && (
+            <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/bookings/${booking.id}/reschedule`)}>
+              Reschedule
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
@@ -285,13 +304,16 @@ export function BookingCard({
         </p>
       )}
 
-      {isUpcoming && (
+      {/* BUG-009 fix — only shown/usable now when the salon is the one who proposed it (the
+          customer is the responder in that direction); a customer-proposed one just shows the
+          "waiting on the salon" badge above. */}
+      {isUpcoming && pendingReschedule?.requestedBy === "SALON" && (
         <button
           type="button"
           onClick={() => onRespondToReschedule(booking)}
           className="mt-2 w-full text-center text-xs text-muted-foreground underline underline-offset-2"
         >
-          Respond to a reschedule request
+          Respond to reschedule request
         </button>
       )}
     </Card>

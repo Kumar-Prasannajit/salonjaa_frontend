@@ -97,8 +97,19 @@ export default function BookingsPage() {
   const buckets = useMemo(() => {
     const list = bookings || [];
     return {
+      // BUG-008 fix — REJECTED used to match none of these three buckets and silently vanish
+      // from the page entirely. Folded into "Upcoming" per the user's expectation (it's the
+      // bucket the booking was sitting in right before the salon rejected it, and it's the
+      // first place a customer would look), not "Cancelled" — a rejection is a salon decision,
+      // not something the customer did.
       upcoming: list
-        .filter((b) => b.bookingStatus === "PENDING" || b.bookingStatus === "AWAITING_PAYMENT" || b.bookingStatus === "APPROVED")
+        .filter(
+          (b) =>
+            b.bookingStatus === "PENDING" ||
+            b.bookingStatus === "AWAITING_PAYMENT" ||
+            b.bookingStatus === "APPROVED" ||
+            b.bookingStatus === "REJECTED"
+        )
         .sort((a, b) => a.scheduledStart.localeCompare(b.scheduledStart)),
       completed: list.filter((b) => b.bookingStatus === "COMPLETED").sort((a, b) => b.scheduledStart.localeCompare(a.scheduledStart)),
       // Module 16 — NO_SHOW folds in here too, same reasoning as EXPIRED:
