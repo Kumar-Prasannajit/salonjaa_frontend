@@ -46,7 +46,7 @@ export default function AdminComplaintsPage() {
 
   return (
     <main>
-      <h1 className="text-lg font-semibold md:text-2xl">Complaints Queue</h1>
+      <h1 className="font-serif text-lg font-semibold md:text-2xl">Complaints Queue</h1>
 
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {TABS.map((t) => (
@@ -55,7 +55,7 @@ export default function AdminComplaintsPage() {
             type="button"
             onClick={() => setTab(t.key)}
             className={`shrink-0 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.key ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border text-muted-foreground"
+              tab === t.key ? "bg-gradient-to-r from-brass to-brass-bright text-primary-foreground" : "border border-border text-muted-foreground"
             }`}
           >
             {t.label}
@@ -84,18 +84,20 @@ export default function AdminComplaintsPage() {
           </Card>
         )}
 
-        {complaints?.map((c) => (
-          <Card key={c.id} className="cursor-pointer gap-1 p-4 transition-colors hover:bg-accent/40" onClick={() => router.push(`/admin/complaints/${c.id}`)}>
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">{c.type}</p>
-              <Badge variant={VARIANT[c.status]}>{c.status}</Badge>
-            </div>
-            <p className="line-clamp-2 text-sm text-muted-foreground">{c.description}</p>
-            <p className="text-xs text-muted-foreground">
-              {c.filedBy.fullName || c.filedBy.email} • {formatDateTime(c.createdAt)}
-            </p>
-          </Card>
-        ))}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {complaints?.map((c) => (
+            <Card key={c.id} className="cursor-pointer gap-1 p-4 transition-colors hover:bg-accent/40" onClick={() => router.push(`/admin/complaints/${c.id}`)}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold">{c.type}</p>
+                <Badge variant={VARIANT[c.status]}>{c.status}</Badge>
+              </div>
+              <p className="line-clamp-2 text-sm text-muted-foreground">{c.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {c.filedBy.fullName || c.filedBy.email} • {formatDateTime(c.createdAt)}
+              </p>
+            </Card>
+          ))}
+        </div>
       </div>
     </main>
   );

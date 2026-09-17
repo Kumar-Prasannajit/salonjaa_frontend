@@ -205,7 +205,7 @@ export function BookingCard({
 
       {booking.bookingStatus === "COMPLETED" && (
         <div className="mt-4 flex gap-2">
-          <Button size="sm" className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push(`/bookings/${booking.id}/review`)}>
+          <Button size="sm" className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push(`/bookings/${booking.id}/review`)}>
             Leave a Review
           </Button>
           <Button size="sm" variant="outline" className="flex-1" onClick={() => router.push(`/reviews/salon/${booking.salonId}`)}>
@@ -245,7 +245,7 @@ export function BookingCard({
           {booking.bookingStatus === "AWAITING_PAYMENT" && (
             <Button
               size="sm"
-              className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+              className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
               onClick={() => router.push(`/bookings/${booking.id}/pay`)}
             >
               Pay Now
@@ -254,7 +254,7 @@ export function BookingCard({
           {advanceDue && (
             <Button
               size="sm"
-              className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+              className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
               onClick={() => router.push(`/bookings/${booking.id}/pay`)}
             >
               Pay ₹{booking.advanceAmount} Advance

@@ -48,7 +48,7 @@ export function BranchCapacityCard({ branchId }: { branchId: string }) {
 
   return (
     <Card className="p-5">
-      <h2 className="font-semibold">Capacity Override</h2>
+      <h2 className="font-serif font-semibold">Capacity Override</h2>
       <p className="text-xs text-muted-foreground">
         Effective capacity is normally MIN(chairs, eligible staff). An override caps it further — there&apos;s no read endpoint, so this shows only
         what you set just now.
@@ -67,7 +67,7 @@ export function BranchCapacityCard({ branchId }: { branchId: string }) {
           <Label htmlFor="capacity-override">Max capacity override</Label>
           <Input id="capacity-override" type="number" min="1" required value={value} onChange={(e) => setValue(e.target.value)} />
         </div>
-        <Button type="submit" size="sm" disabled={busy} className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+        <Button type="submit" size="sm" disabled={busy} className="bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
           {busy ? "Saving…" : "Set"}
         </Button>
       </form>

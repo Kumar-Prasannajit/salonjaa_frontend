@@ -67,11 +67,11 @@ export default function RescheduleBookingPage() {
     return (
       <main className="mx-auto flex min-h-svh w-full max-w-md flex-col items-center justify-center bg-background px-5 py-8 text-center md:max-w-2xl">
         <CheckCircle2 className="size-12 text-success" />
-        <h1 className="mt-4 text-xl font-semibold">Reschedule requested</h1>
+        <h1 className="mt-4 font-serif text-xl font-semibold">Reschedule requested</h1>
         <p className="mt-2 max-w-xs text-sm text-muted-foreground">
           Your original appointment is still confirmed until the salon accepts this request.
         </p>
-        <Button className="mt-6 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/bookings")}>
+        <Button className="mt-6 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/bookings")}>
           Back to My Bookings
         </Button>
       </main>
@@ -79,12 +79,12 @@ export default function RescheduleBookingPage() {
   }
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-3xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 text-center text-lg font-semibold md:text-left md:text-2xl">Request Reschedule</h1>
+        <h1 className="flex-1 text-center font-serif text-lg font-semibold md:text-left md:text-2xl">Request Reschedule</h1>
         <div className="size-8" />
       </div>
 

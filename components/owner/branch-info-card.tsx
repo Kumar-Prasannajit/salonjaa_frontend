@@ -80,7 +80,7 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
     <Card className="p-5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h2 className="font-semibold">{branch.name}</h2>
+          <h2 className="font-serif font-semibold">{branch.name}</h2>
           <Badge variant="outline">{branch.status}</Badge>
         </div>
         <Button size="sm" variant="outline" onClick={() => setEditing((v) => !v)}>
@@ -152,7 +152,7 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
               <option value="WOMEN">Women</option>
             </select>
           </div>
-          <Button type="submit" disabled={busy} className="sm:col-span-2 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+          <Button type="submit" disabled={busy} className="sm:col-span-2 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
             {busy ? "Saving…" : "Save changes"}
           </Button>
         </form>

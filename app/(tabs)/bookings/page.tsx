@@ -224,7 +224,7 @@ export default function BookingsPage() {
         </Card>
         <h1 className="text-xl font-semibold">Sign in to view your bookings</h1>
         <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">Your appointments and their status live here once you&apos;re signed in.</p>
-        <Button className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/profile")}>
+        <Button className="bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/profile")}>
           Go to Profile to sign in
         </Button>
       </main>
@@ -232,9 +232,9 @@ export default function BookingsPage() {
   }
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-5xl">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold md:text-2xl">My Bookings</h1>
+        <h1 className="font-serif text-lg font-semibold md:text-2xl">My Bookings</h1>
         {/* Module 23 — POST /bookings/claim, also reachable from Profile. */}
         <button type="button" onClick={() => router.push("/bookings/claim")} className="text-sm font-medium text-primary underline-offset-2 hover:underline">
           Claim a Walk-in
@@ -248,7 +248,7 @@ export default function BookingsPage() {
             type="button"
             onClick={() => setTab(t.key)}
             className={`flex-1 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.key ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border text-muted-foreground"
+              tab === t.key ? "bg-gradient-to-r from-brass to-brass-bright text-primary-foreground" : "border border-border text-muted-foreground"
             }`}
           >
             {t.label}
@@ -280,19 +280,21 @@ export default function BookingsPage() {
           </Card>
         )}
 
-        {activeList.map((b) => (
-          <BookingCard
-            key={b.id}
-            booking={b}
-            detail={details[b.id]}
-            paid={paidBookingIds.has(b.id)}
-            onCancel={setCancelTarget}
-            cancelling={cancelBusy && cancelTarget?.id === b.id}
-            onRespondToReschedule={setRescheduleTarget}
-            refund={refundByBookingId[b.id]}
-            onRequestRefund={setRefundTarget}
-          />
-        ))}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {activeList.map((b) => (
+            <BookingCard
+              key={b.id}
+              booking={b}
+              detail={details[b.id]}
+              paid={paidBookingIds.has(b.id)}
+              onCancel={setCancelTarget}
+              cancelling={cancelBusy && cancelTarget?.id === b.id}
+              onRespondToReschedule={setRescheduleTarget}
+              refund={refundByBookingId[b.id]}
+              onRequestRefund={setRefundTarget}
+            />
+          ))}
+        </div>
       </div>
 
       <CancelBookingDialog

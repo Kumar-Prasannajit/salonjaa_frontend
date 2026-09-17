@@ -28,7 +28,7 @@ export function RoleGuard({ role, children }: { role: "SALON_OWNER" | "ADMIN" | 
         <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
           Sign in with an account that has {roleLabel} access to open {destination}.
         </p>
-        <Button className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/profile")}>
+        <Button className="bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/profile")}>
           Go to Profile to sign in
         </Button>
       </main>

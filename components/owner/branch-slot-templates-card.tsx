@@ -111,7 +111,7 @@ export function BranchSlotTemplatesCard({ branchId }: { branchId: string }) {
 
   return (
     <Card className="p-5">
-      <h2 className="font-semibold">Slot Templates</h2>
+      <h2 className="font-serif font-semibold">Slot Templates</h2>
       <p className="text-xs text-muted-foreground">
         No active templates: this branch keeps the default fixed 30-minute interval across its opening hours. Add one or more to override it.
       </p>
@@ -166,7 +166,7 @@ export function BranchSlotTemplatesCard({ branchId }: { branchId: string }) {
           <Label htmlFor="template-name">Name</Label>
           <Input id="template-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Morning shift" />
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="template-start">Start</Label>
             <Input id="template-start" type="time" required value={form.startTime} onChange={(e) => setForm({ ...form, startTime: e.target.value })} />
@@ -187,7 +187,7 @@ export function BranchSlotTemplatesCard({ branchId }: { branchId: string }) {
             />
           </div>
         </div>
-        <Button type="submit" size="sm" disabled={busy} className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+        <Button type="submit" size="sm" disabled={busy} className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
           <Plus className="size-4" />
           {busy ? "Adding…" : "Add Template"}
         </Button>

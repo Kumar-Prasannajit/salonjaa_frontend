@@ -154,9 +154,9 @@ export default function WalkInBookingPage() {
     return (
       <main className="flex min-h-[70svh] flex-col items-center justify-center text-center">
         <CheckCircle2 className="size-12 text-success" />
-        <h1 className="mt-4 text-xl font-semibold">Walk-in booked</h1>
+        <h1 className="mt-4 font-serif text-xl font-semibold">Walk-in booked</h1>
         <p className="mt-2 text-sm text-muted-foreground">{created} was created and approved — walk-ins skip the approval step.</p>
-        <Button className="mt-6 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/owner/bookings")}>
+        <Button className="mt-6 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/owner/bookings")}>
           Back to Bookings
         </Button>
       </main>
@@ -169,7 +169,7 @@ export default function WalkInBookingPage() {
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="text-lg font-semibold md:text-2xl">Walk-in Booking</h1>
+        <h1 className="font-serif text-lg font-semibold md:text-2xl">Walk-in Booking</h1>
       </div>
 
       {loadError && (
@@ -186,7 +186,7 @@ export default function WalkInBookingPage() {
       )}
 
       {branches && (
-        <div className="mt-6 space-y-5">
+        <div className="mt-6 max-w-2xl space-y-5">
           <Card className="p-4 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="walkin-branch">Branch</Label>

@@ -80,7 +80,7 @@ export function RespondToRescheduleDialog({
             <Button type="button" variant="outline" className="flex-1 text-destructive hover:text-destructive" disabled={busy} onClick={() => setMode("declining")}>
               Decline
             </Button>
-            <Button type="button" className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" disabled={busy} onClick={onAccept}>
+            <Button type="button" className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" disabled={busy} onClick={onAccept}>
               {busy ? "Accepting…" : "Accept New Time"}
             </Button>
           </div>

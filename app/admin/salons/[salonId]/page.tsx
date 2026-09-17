@@ -72,7 +72,7 @@ export default function AdminSalonDetailPage() {
         <button type="button" onClick={() => router.push("/admin/salons")} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 truncate text-lg font-semibold md:text-2xl">{salon?.name || "Salon"}</h1>
+        <h1 className="flex-1 truncate font-serif text-lg font-semibold md:text-2xl">{salon?.name || "Salon"}</h1>
       </div>
 
       {error && (
@@ -88,7 +88,7 @@ export default function AdminSalonDetailPage() {
       )}
 
       {salon && (
-        <div className="mt-6 space-y-6">
+        <div className="mt-6 max-w-2xl space-y-6">
           <Card className="p-5">
             <div className="flex items-center gap-2">
               <Badge variant={VARIANT[salon.verificationStatus]}>{salon.verificationStatus}</Badge>
@@ -109,7 +109,7 @@ export default function AdminSalonDetailPage() {
           <div className="flex flex-wrap gap-2">
             {salon.verificationStatus === "PENDING" && (
               <>
-                <Button disabled={busy} className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => act("verify", "Salon verified.")}>
+                <Button disabled={busy} className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => act("verify", "Salon verified.")}>
                   Verify
                 </Button>
                 <Button disabled={busy} variant="outline" className="flex-1 text-destructive hover:text-destructive" onClick={() => setDialog("reject")}>
@@ -123,7 +123,7 @@ export default function AdminSalonDetailPage() {
               </Button>
             )}
             {salon.status === "SUSPENDED" && (
-              <Button disabled={busy} className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => act("reactivate", "Salon reactivated.")}>
+              <Button disabled={busy} className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => act("reactivate", "Salon reactivated.")}>
                 Reactivate
               </Button>
             )}

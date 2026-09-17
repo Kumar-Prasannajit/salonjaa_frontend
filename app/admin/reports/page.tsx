@@ -51,7 +51,7 @@ export default function AdminReportsPage() {
 
   return (
     <main>
-      <h1 className="text-lg font-semibold md:text-2xl">Reports Overview</h1>
+      <h1 className="font-serif text-lg font-semibold md:text-2xl">Reports Overview</h1>
 
       <Card className="mt-4 flex flex-row flex-wrap items-end gap-4 p-4">
         <div className="space-y-2">

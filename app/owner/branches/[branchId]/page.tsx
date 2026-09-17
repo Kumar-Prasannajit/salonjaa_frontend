@@ -44,7 +44,7 @@ export default function OwnerBranchDetailPage() {
         >
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 truncate text-lg font-semibold md:text-2xl">{branch?.name || "Branch"}</h1>
+        <h1 className="flex-1 truncate font-serif text-lg font-semibold md:text-2xl">{branch?.name || "Branch"}</h1>
       </div>
 
       {error && (
@@ -61,11 +61,15 @@ export default function OwnerBranchDetailPage() {
       )}
 
       {branch && (
-        <div className="mt-6 space-y-6">
-          <BranchInfoCard branch={branch} onUpdated={setBranch} />
-          <BranchHolidaysCard branchId={branch.id} />
-          <BranchCapacityCard branchId={branch.id} />
-          <BranchSlotTemplatesCard branchId={branch.id} />
+        <div className="mt-6 max-w-6xl space-y-6">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <BranchInfoCard branch={branch} onUpdated={setBranch} />
+            <div className="space-y-6">
+              <BranchHolidaysCard branchId={branch.id} />
+              <BranchCapacityCard branchId={branch.id} />
+              <BranchSlotTemplatesCard branchId={branch.id} />
+            </div>
+          </div>
           <StaffManager branchId={branch.id} />
           <ServiceManager branchId={branch.id} />
         </div>

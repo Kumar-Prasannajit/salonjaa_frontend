@@ -139,9 +139,9 @@ export function PromotionsManager() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BadgePercent className="size-4 text-primary" />
-          <h2 className="font-semibold">Promotions</h2>
+          <h2 className="font-serif font-semibold">Promotions</h2>
         </div>
-        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" disabled={!branches?.length} onClick={openCreate}>
+        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" disabled={!branches?.length} onClick={openCreate}>
           <Plus className="size-4" />
           New Promotion
         </Button>
@@ -213,7 +213,7 @@ export function PromotionsManager() {
               <Label htmlFor="promo-banner">Banner image URL</Label>
               <Input id="promo-banner" value={form.bannerImageUrl} onChange={(e) => setForm({ ...form, bannerImageUrl: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="promo-starts">Starts</Label>
                 <Input id="promo-starts" type="datetime-local" required value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} />
@@ -238,7 +238,7 @@ export function PromotionsManager() {
               <Checkbox checked={form.featured} onCheckedChange={(v) => setForm({ ...form, featured: v === true })} />
               Feature on listing cards
             </label>
-            <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+            <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
               {busy ? "Saving…" : editing ? "Save changes" : "Create promotion"}
             </Button>
           </form>

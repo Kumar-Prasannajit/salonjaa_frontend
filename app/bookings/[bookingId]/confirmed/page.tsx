@@ -55,12 +55,12 @@ export default function BookingConfirmedPage() {
   }
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 text-center md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 text-center md:max-w-2xl md:px-10 md:py-12 lg:max-w-2xl">
       <div className="flex flex-col items-center">
         <div className="grid size-16 place-items-center rounded-full border-2 border-primary/60">
           <CheckCircle2 className="size-9 text-primary" strokeWidth={1.5} />
         </div>
-        <h1 className="mt-4 text-2xl font-bold text-primary">Booking Confirmed!</h1>
+        <h1 className="mt-4 font-serif text-2xl font-semibold text-primary">Booking confirmed</h1>
         <p className="mt-2 max-w-xs text-sm text-muted-foreground">You&apos;re all set for some well-deserved pampering.</p>
       </div>
 
@@ -87,7 +87,7 @@ export default function BookingConfirmedPage() {
       </Card>
 
       <div className="mt-8 space-y-3">
-        <Button className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/bookings")}>
+        <Button className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/bookings")}>
           View My Bookings
         </Button>
         <Button

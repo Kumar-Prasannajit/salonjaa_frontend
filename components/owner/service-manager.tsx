@@ -246,8 +246,8 @@ export function ServiceManager({ branchId }: { branchId: string }) {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold">Services</h2>
-        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" disabled={!categories.length} onClick={openCreate}>
+        <h2 className="font-serif font-semibold">Services</h2>
+        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" disabled={!categories.length} onClick={openCreate}>
           <Plus className="size-4" />
           Add Service
         </Button>
@@ -337,7 +337,7 @@ export function ServiceManager({ branchId }: { branchId: string }) {
                     size="sm"
                     disabled={!variantForm.name.trim() || !variantForm.price || variantBusy}
                     onClick={() => addVariant(s.id)}
-                    className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+                    className="bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
                   >
                     {variantBusy ? "Adding…" : "Add"}
                   </Button>
@@ -377,7 +377,7 @@ export function ServiceManager({ branchId }: { branchId: string }) {
                         </option>
                       ))}
                     </select>
-                    <Button size="sm" disabled={!assignSelection || assignBusy} onClick={() => assign(s.id)} className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+                    <Button size="sm" disabled={!assignSelection || assignBusy} onClick={() => assign(s.id)} className="bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
                       {assignBusy ? "Assigning…" : "Assign"}
                     </Button>
                   </div>
@@ -429,7 +429,7 @@ export function ServiceManager({ branchId }: { branchId: string }) {
                 <Input id="service-price" type="number" min="1" required value={form.basePrice} onChange={(e) => setForm({ ...form, basePrice: e.target.value })} />
               </div>
             </div>
-            <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+            <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
               {busy ? "Saving…" : editing ? "Save changes" : "Add service"}
             </Button>
           </form>

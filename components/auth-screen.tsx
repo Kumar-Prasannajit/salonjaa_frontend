@@ -1,22 +1,19 @@
 "use client";
 
 import { FormEvent } from "react";
-import { CalendarClock, Gem, Lock, MapPin, Sparkles } from "lucide-react";
+import { CalendarClock, Gem, Lock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import type { UseAccountReturn } from "@/hooks/use-account";
 
-// Matches docs/designs/01-auth-screen.jpeg for the splash half. That design
-// only covers the pre-auth splash — there's no reference screen for the
-// email/OTP form itself, so the form panel's visual language (bordered
-// card, gold CTA, gold-outline ghost actions) is extrapolated from the
-// same dark/gold system the other 11 screens use, not copied from a design.
-// The "SALONJAA" wordmark in the design is a logo graphic with an integrated
-// scissors icon; reproduced here as styled text + a Sparkles glyph since we
-// don't have the original artwork as an asset.
+// 2026-09 rebrand: splash half now uses components/logo.tsx's real crest +
+// Fraunces wordmark instead of styled text with a generic Sparkles glyph.
+// The form panel's visual language (bordered card, brass CTA, brass-outline
+// ghost actions) carries over unchanged from the original dark/brass system.
 const FEATURES = [
   { icon: MapPin, label: "Nearby Salons" },
   { icon: CalendarClock, label: "Easy Booking" },
@@ -66,8 +63,8 @@ export function AuthScreen({
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(ellipse 55% 50% at 12% 85%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 65%)," +
-            "radial-gradient(ellipse 34% 40% at 88% 10%, color-mix(in srgb, var(--gold-bright) 12%, transparent), transparent 70%)",
+            "radial-gradient(ellipse 55% 50% at 12% 85%, color-mix(in srgb, var(--brass) 22%, transparent), transparent 65%)," +
+            "radial-gradient(ellipse 34% 40% at 88% 10%, color-mix(in srgb, var(--brass-bright) 12%, transparent), transparent 70%)",
         }}
       />
 
@@ -83,18 +80,10 @@ export function AuthScreen({
             authLanding ? "animate-in fade-in slide-in-from-bottom-4" : ""
           )}
         >
-          <div className="grid size-24 place-items-center rounded-2xl border border-primary/50">
-            <Sparkles className="size-11 text-primary" strokeWidth={1.5} />
-          </div>
-          <div>
-            <h1 className="font-sans text-4xl font-bold tracking-[0.14em] text-primary">SALONJAA</h1>
-            <p className="mt-2 text-xs font-semibold tracking-[0.18em] text-foreground">BOOK YOUR BEAUTICIAN</p>
-          </div>
-          <p className="max-w-xs text-lg text-foreground/90">
-            Find. Book. Beauty.
-            <br />
-            All in one place.
-          </p>
+          <Logo iconClassName="size-16" textClassName="text-3xl" />
+          <h1 className="max-w-sm font-serif text-3xl font-semibold leading-tight text-foreground md:text-4xl">
+            Beauty, booked the way you like things done.
+          </h1>
           <div className="grid grid-cols-2 gap-3">
             {FEATURES.map(({ icon: Icon, label }) => (
               <div
@@ -110,8 +99,7 @@ export function AuthScreen({
 
         {!authLanding && (
           <section className="mx-auto w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 rounded-2xl border border-border bg-card p-8 shadow-2xl">
-            <p className="mb-3 text-xs font-semibold tracking-[0.14em] text-primary">WELCOME TO SALONJAA</p>
-            <h2 className="text-3xl font-semibold">{stage === "email" ? "Let's get you glowing." : "One final step."}</h2>
+            <h2 className="font-serif text-3xl font-semibold">{stage === "email" ? "Let's get you glowing." : "One final step."}</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               {stage === "email" ? (
                 "Enter your email address to receive a secure verification code."
@@ -150,7 +138,7 @@ export function AuthScreen({
                 <Button
                   type="submit"
                   disabled={busy || cooldown > 0}
-                  className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+                  className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
                 >
                   {busy ? "Sending…" : cooldown ? `Try again in ${cooldown}s` : "Send verification code"}
                 </Button>
@@ -174,7 +162,7 @@ export function AuthScreen({
                 <Button
                   type="submit"
                   disabled={busy || otp.length !== 6}
-                  className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+                  className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
                 >
                   {busy ? "Verifying…" : "Verify & continue"}
                 </Button>

@@ -61,7 +61,7 @@ export function CheckoutAuthStep({
             <Label htmlFor="checkout-email">Email address</Label>
             <Input id="checkout-email" type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-          <Button type="submit" disabled={busy || cooldown > 0} className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+          <Button type="submit" disabled={busy || cooldown > 0} className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
             {busy ? "Sending…" : cooldown ? `Try again in ${cooldown}s` : "Send verification code"}
           </Button>
         </form>
@@ -81,7 +81,7 @@ export function CheckoutAuthStep({
               className="text-center text-lg tracking-[0.4em]"
             />
           </div>
-          <Button type="submit" disabled={busy || otp.length !== 6} className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+          <Button type="submit" disabled={busy || otp.length !== 6} className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
             {busy ? "Verifying…" : "Verify & continue"}
           </Button>
           <div className="flex justify-between text-xs">

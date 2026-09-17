@@ -80,10 +80,10 @@ export default function NewBranchPage() {
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="text-lg font-semibold md:text-2xl">New Branch</h1>
+        <h1 className="font-serif text-lg font-semibold md:text-2xl">New Branch</h1>
       </div>
 
-      <Card className="mt-6 p-5">
+      <Card className="mt-6 max-w-2xl p-5">
         <form onSubmit={submit} className="space-y-4">
           {error && (
             <Alert variant="destructive">
@@ -142,7 +142,7 @@ export default function NewBranchPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="branch-chairs">Total chairs</Label>
               <Input id="branch-chairs" type="number" min="1" required value={form.totalChairs} onChange={set("totalChairs")} />
@@ -157,7 +157,7 @@ export default function NewBranchPage() {
             </div>
           </div>
 
-          <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+          <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
             {busy ? "Creating…" : "Create branch"}
           </Button>
         </form>

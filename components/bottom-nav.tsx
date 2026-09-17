@@ -10,6 +10,9 @@ import { cn } from "@/lib/utils";
 // screen alone swaps "Offers" for a floating "+" action, but every other
 // screen in both the light and dark sets uses this same 5-tab bar, so that's
 // treated as the one inconsistent frame rather than the intended pattern.
+//
+// 2026-09 responsive rebuild: mobile/tablet only (`md:hidden`) — components/desktop-nav.tsx
+// is the `md`+ counterpart, shown inline in the header instead.
 const TABS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/bookings", label: "Bookings", icon: Calendar },
@@ -22,8 +25,8 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <div className="mx-auto flex max-w-md items-center justify-between px-2 py-2 md:max-w-3xl">
+    <nav className="sticky bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden">
+      <div className="mx-auto flex max-w-md items-center justify-between px-2 py-2">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (

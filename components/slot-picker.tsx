@@ -100,7 +100,7 @@ export function SlotPicker({
         )}
 
         {!error && slots === null && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-11 w-full rounded-lg" />
             ))}
@@ -123,7 +123,7 @@ export function SlotPicker({
             return (
               <div key={label}>
                 <p className="mb-2 font-semibold">{label}</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
                   {bucketSlots.map((s) => {
                     const isSelected = selectedSlot?.slotId === s.slotId;
                     return (
@@ -156,7 +156,7 @@ export function SlotPicker({
           </Card>
         )}
         <Button
-          className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+          className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
           disabled={!selectedSlot}
           onClick={() => selectedSlot && onContinue(selectedDate, selectedSlot)}
         >

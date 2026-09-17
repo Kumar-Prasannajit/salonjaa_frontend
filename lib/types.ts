@@ -564,6 +564,86 @@ export type AdminComplaint = {
   linkedPayment?: { id: string; amount: number; status: string } | null;
 };
 
+// GET/POST /admin/categories, PATCH/DELETE /admin/categories/:id (BUG-013 fix)
+// — checked directly against admin-category.types.ts's AdminCategoryDTO.
+// Distinct from the public-facing ServiceCategory above (which only ever
+// returns id/name/icon for already-ACTIVE rows) — this admin shape also
+// carries slug/status/timestamps for management.
+export type AdminCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  createdAt: string;
+  updatedAt: string;
+};
+
+// GET/POST /admin/coupons, PATCH/DELETE /admin/coupons/:id (BUG-013 fix) —
+// checked directly against admin-coupon.types.ts's AdminCouponDTO.
+export type AdminCoupon = {
+  id: string;
+  couponCode: string;
+  type: "FIXED" | "PERCENTAGE";
+  value: number;
+  minimumAmount: number | null;
+  maxDiscount: number | null;
+  usageLimit: number | null;
+  usedCount: number;
+  startsAt: string | null;
+  expiresAt: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// GET/POST /admin/settlements, POST /admin/settlements/:id/mark-settled
+// (BUG-013 fix) — checked directly against admin-settlement.types.ts's
+// AdminSettlementDTO. Deliberately manual (TRD §4: "manual MVP records") —
+// no commission-rate rule exists anywhere, so netAmount is just
+// gross - commission - refund + adjustment, computed server-side from
+// whatever the admin enters.
+export type AdminSettlement = {
+  id: string;
+  salonId: string;
+  branchId: string | null;
+  periodStart: string;
+  periodEnd: string;
+  grossAmount: number;
+  commissionAmount: number;
+  refundAmount: number;
+  adjustmentAmount: number;
+  netAmount: number;
+  status: "PENDING" | "PROCESSING" | "COMPLETED";
+  settledAt: string | null;
+  createdAt: string;
+};
+
+// GET/POST/POST /admin/customers/:customerId/strikes(/:strikeId/remove)
+// (BUG-013 fix) — checked directly against admin-strike.types.ts's
+// AdminStrikeDTO/CustomerStrikeSummary. There's no admin "list/search
+// customers" endpoint anywhere in the documented contract, so the strikes
+// screen can only look a customer up by an ID already known from elsewhere
+// (a complaint, refund, or booking detail) — not invented here.
+export type AdminStrike = {
+  id: string;
+  customerId: string;
+  bookingId: string | null;
+  type: "FAKE_BOOKING" | "NO_SHOW" | "ABUSIVE_CANCELLATION";
+  notes: string | null;
+  removedAt: string | null;
+  removedBy: string | null;
+  removalReason: string | null;
+  createdAt: string;
+};
+
+export type CustomerStrikeSummary = {
+  customerId: string;
+  activeNoShowCount: number;
+  advancePaymentRequired: boolean;
+  strikes: AdminStrike[];
+};
+
 export type AdminReportOverview = {
   totalBookings: number;
   completedBookings: number;

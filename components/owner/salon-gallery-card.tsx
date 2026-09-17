@@ -81,7 +81,7 @@ export function SalonGalleryCard({ salonId }: { salonId: string }) {
 
   return (
     <Card className="p-5">
-      <h2 className="font-semibold">Gallery</h2>
+      <h2 className="font-serif font-semibold">Gallery</h2>
       <p className="text-xs text-muted-foreground">Shown on the salon&apos;s public detail page. Paste an image URL — there&apos;s no upload endpoint yet.</p>
 
       {error && (
@@ -124,7 +124,7 @@ export function SalonGalleryCard({ salonId }: { salonId: string }) {
           <Label htmlFor="gallery-url">Image URL</Label>
           <Input id="gallery-url" type="url" required value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
         </div>
-        <Button type="submit" size="sm" disabled={busy} className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+        <Button type="submit" size="sm" disabled={busy} className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
           <Plus className="size-4" />
           {busy ? "Adding…" : "Add"}
         </Button>

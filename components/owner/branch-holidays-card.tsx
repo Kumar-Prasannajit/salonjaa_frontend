@@ -68,7 +68,7 @@ export function BranchHolidaysCard({ branchId }: { branchId: string }) {
 
   return (
     <Card className="p-5">
-      <h2 className="font-semibold">Holidays</h2>
+      <h2 className="font-serif font-semibold">Holidays</h2>
       <p className="text-xs text-muted-foreground">Only holidays added this session are listed — there&apos;s no endpoint to fetch existing ones.</p>
 
       {error && (
@@ -106,7 +106,7 @@ export function BranchHolidaysCard({ branchId }: { branchId: string }) {
           <Label htmlFor="holiday-reason">Reason</Label>
           <Input id="holiday-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Christmas" />
         </div>
-        <Button type="submit" size="sm" disabled={busy} className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+        <Button type="submit" size="sm" disabled={busy} className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
           <Plus className="size-4" />
           {busy ? "Adding…" : "Add"}
         </Button>

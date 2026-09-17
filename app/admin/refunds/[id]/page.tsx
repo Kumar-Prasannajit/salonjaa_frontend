@@ -69,7 +69,7 @@ export default function AdminRefundDetailPage() {
         <button type="button" onClick={() => router.push("/admin/refunds")} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="text-lg font-semibold md:text-2xl">Refund Detail</h1>
+        <h1 className="font-serif text-lg font-semibold md:text-2xl">Refund Detail</h1>
       </div>
 
       {error && (
@@ -85,7 +85,7 @@ export default function AdminRefundDetailPage() {
       )}
 
       {refund && (
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 max-w-3xl space-y-4">
           <Card className="p-5">
             <div className="flex items-center justify-between gap-3">
               <p className="text-lg font-semibold">₹{refund.amount}</p>
@@ -95,29 +95,31 @@ export default function AdminRefundDetailPage() {
             <p className="mt-1 text-xs text-muted-foreground">Requested {formatDateTime(refund.createdAt)}</p>
           </Card>
 
-          <Card className="p-5 text-sm">
-            <p className="font-medium">Booking</p>
-            <p className="mt-1 text-muted-foreground">{refund.booking.bookingNumber} • {refund.booking.bookingStatus}</p>
-            <p className="text-muted-foreground">{formatDateTime(refund.booking.scheduledStart)}</p>
-            <p className="text-muted-foreground">Total: ₹{refund.booking.totalAmount}</p>
-          </Card>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="p-5 text-sm">
+              <p className="font-medium">Booking</p>
+              <p className="mt-1 text-muted-foreground">{refund.booking.bookingNumber} • {refund.booking.bookingStatus}</p>
+              <p className="text-muted-foreground">{formatDateTime(refund.booking.scheduledStart)}</p>
+              <p className="text-muted-foreground">Total: ₹{refund.booking.totalAmount}</p>
+            </Card>
 
-          <Card className="p-5 text-sm">
-            <p className="font-medium">Payment</p>
-            <p className="mt-1 text-muted-foreground">₹{refund.payment.amount} {refund.payment.currency} • {refund.payment.status}</p>
-            {refund.payment.providerPaymentId && <p className="text-muted-foreground">Provider ID: {refund.payment.providerPaymentId}</p>}
-            {refund.payment.paidAt && <p className="text-muted-foreground">Paid {formatDateTime(refund.payment.paidAt)}</p>}
-          </Card>
+            <Card className="p-5 text-sm">
+              <p className="font-medium">Payment</p>
+              <p className="mt-1 text-muted-foreground">₹{refund.payment.amount} {refund.payment.currency} • {refund.payment.status}</p>
+              {refund.payment.providerPaymentId && <p className="text-muted-foreground">Provider ID: {refund.payment.providerPaymentId}</p>}
+              {refund.payment.paidAt && <p className="text-muted-foreground">Paid {formatDateTime(refund.payment.paidAt)}</p>}
+            </Card>
 
-          <Card className="p-5 text-sm">
-            <p className="font-medium">Customer</p>
-            <p className="mt-1 text-muted-foreground">{refund.customer?.fullName || "No name on file"}</p>
-            <p className="text-muted-foreground">{refund.customer?.email || "—"}</p>
-          </Card>
+            <Card className="p-5 text-sm">
+              <p className="font-medium">Customer</p>
+              <p className="mt-1 text-muted-foreground">{refund.customer?.fullName || "No name on file"}</p>
+              <p className="text-muted-foreground">{refund.customer?.email || "—"}</p>
+            </Card>
+          </div>
 
           {refund.status === "PENDING" && (
             <div className="flex gap-2">
-              <Button disabled={busy} className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => setDialog("approve")}>
+              <Button disabled={busy} className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => setDialog("approve")}>
                 Approve
               </Button>
               <Button disabled={busy} variant="outline" className="flex-1 text-destructive hover:text-destructive" onClick={() => setDialog("reject")}>
@@ -131,7 +133,7 @@ export default function AdminRefundDetailPage() {
       <ReasonDialog
         open={dialog === "approve"}
         title="Approve this refund?"
-        description="This credits the customer's Salonjaa wallet with the refund amount immediately — not a reversal on their original payment method."
+        description="This credits the customer's Book My Charm wallet with the refund amount immediately — not a reversal on their original payment method."
         label="Notes (optional)"
         required={false}
         confirmLabel="Approve"

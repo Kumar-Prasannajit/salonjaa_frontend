@@ -75,10 +75,10 @@ export default function PayBookingPage() {
       await openRazorpayCheckout({
         amount: Math.round(order.amount * 100), // Razorpay Checkout needs paise; create-order returns rupees
         currency: order.currency,
-        name: "Salonjaa",
+        name: "Book My Charm",
         description: booking.bookingNumber,
         order_id: order.orderId,
-        theme: { color: "#d9a044" },
+        theme: { color: "#a9713f" },
         handler: (response) => verifyPayment(order.orderId, response.razorpay_payment_id, response.razorpay_signature),
         modal: {
           ondismiss: () => {
@@ -142,12 +142,12 @@ export default function PayBookingPage() {
   if (hasSuccessfulPayment && booking?.paymentMethod === "ONLINE") return null;
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-2xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 text-center text-lg font-semibold md:text-left md:text-2xl">Payment</h1>
+        <h1 className="flex-1 text-center font-serif text-lg font-semibold md:text-left md:text-2xl">Payment</h1>
         <div className="size-8" />
       </div>
 
@@ -227,7 +227,7 @@ export default function PayBookingPage() {
           )}
 
           <Button
-            className="w-full gap-2 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+            className="w-full gap-2 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
             disabled={busy}
             onClick={pay}
           >

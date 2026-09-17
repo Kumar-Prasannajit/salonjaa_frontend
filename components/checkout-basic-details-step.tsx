@@ -68,7 +68,7 @@ export function CheckoutBasicDetailsStep({ profile, setProfile, saveProfile, bus
             />
           </div>
         </div>
-        <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+        <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
           {busy ? "Saving…" : "Continue"}
         </Button>
       </form>

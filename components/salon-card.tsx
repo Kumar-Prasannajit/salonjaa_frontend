@@ -4,6 +4,7 @@ import { MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import { BadgePercent, MapPin, Star, Store } from "lucide-react";
 import type { PublicBranchSummary } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +62,7 @@ function SignalBadges({ branch }: { branch: PublicBranchSummary }) {
         </Badge>
       )}
       {branch.activePromotion && (
-        <Badge className="gap-1 bg-gradient-to-r from-gold to-gold-bright px-1.5 py-0 text-[10px] text-primary-foreground">
+        <Badge className="gap-1 bg-gradient-to-r from-brass to-brass-bright px-1.5 py-0 text-[10px] text-primary-foreground">
           <BadgePercent className="size-3" />
           <span className="max-w-24 truncate">{branch.activePromotion.title}</span>
         </Badge>
@@ -70,7 +71,7 @@ function SignalBadges({ branch }: { branch: PublicBranchSummary }) {
   );
 }
 
-export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; variant: "grid" | "row" }) {
+export function SalonCard({ branch, variant, className }: { branch: PublicBranchSummary; variant: "grid" | "row"; className?: string }) {
   const router = useRouter();
   const title = branch.branchName && branch.branchName !== branch.salonName ? `${branch.salonName} · ${branch.branchName}` : branch.salonName;
   const goToDetails = () => router.push(`/salons/${branch.branchId}`);
@@ -81,10 +82,12 @@ export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; va
 
   if (variant === "row") {
     return (
-      <Card onClick={goToDetails} className="cursor-pointer flex-row items-center gap-3 p-3">
-        <CoverImage branch={branch} className="size-20 shrink-0 rounded-lg" />
+      <Card onClick={goToDetails} className="group cursor-pointer flex-row items-center gap-3 overflow-hidden p-3 transition-shadow hover:shadow-lg sm:gap-5 sm:p-4">
+        <div className="overflow-hidden rounded-lg">
+          <CoverImage branch={branch} className="size-20 shrink-0 rounded-lg transition-transform duration-500 group-hover:scale-105 sm:size-28" />
+        </div>
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="truncate font-semibold">{title}</p>
+          <p className="truncate font-serif text-base font-semibold sm:text-lg">{title}</p>
           <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
             <MapPin className="size-3 shrink-0" />
             {branch.city}
@@ -93,7 +96,7 @@ export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; va
           <RatingLine branch={branch} />
           <SignalBadges branch={branch} />
         </div>
-        <Button size="sm" className="shrink-0 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={goToServices}>
+        <Button size="sm" className="shrink-0 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={goToServices}>
           Book
         </Button>
       </Card>
@@ -101,11 +104,20 @@ export function SalonCard({ branch, variant }: { branch: PublicBranchSummary; va
   }
 
   return (
-    <Card onClick={goToDetails} className="w-44 shrink-0 cursor-pointer gap-0 overflow-hidden p-0">
-      <CoverImage branch={branch} className="h-28 w-full" />
-      <div className="space-y-1 p-3">
-        <p className="truncate font-semibold">{title}</p>
-        <p className="truncate text-xs text-muted-foreground">
+    <Card
+      onClick={goToDetails}
+      className={cn(
+        "group w-44 shrink-0 cursor-pointer gap-0 overflow-hidden p-0 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl sm:w-full",
+        className
+      )}
+    >
+      <div className="overflow-hidden">
+        <CoverImage branch={branch} className="h-28 w-full transition-transform duration-500 group-hover:scale-105 sm:h-40 lg:h-52" />
+      </div>
+      <div className="space-y-1.5 p-3 sm:p-5">
+        <p className="truncate font-serif text-base font-semibold sm:text-lg">{title}</p>
+        <p className="flex items-center gap-1 truncate text-xs text-muted-foreground sm:text-sm">
+          <MapPin className="hidden size-3.5 shrink-0 sm:inline" />
           {branch.addressLine1 || branch.city}
           {branch.distanceKm != null && `, ${branch.distanceKm.toFixed(1)} km`}
         </p>

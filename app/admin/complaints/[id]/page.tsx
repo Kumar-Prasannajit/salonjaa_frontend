@@ -68,7 +68,7 @@ export default function AdminComplaintDetailPage() {
         <button type="button" onClick={() => router.push("/admin/complaints")} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="text-lg font-semibold md:text-2xl">Complaint Detail</h1>
+        <h1 className="font-serif text-lg font-semibold md:text-2xl">Complaint Detail</h1>
       </div>
 
       {error && (
@@ -84,7 +84,7 @@ export default function AdminComplaintDetailPage() {
       )}
 
       {complaint && (
-        <div className="mt-6 space-y-4">
+        <div className="mt-6 max-w-3xl space-y-4">
           <Card className="p-5">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold">{complaint.type}</p>
@@ -94,29 +94,31 @@ export default function AdminComplaintDetailPage() {
             <p className="mt-2 text-xs text-muted-foreground">Filed {formatDateTime(complaint.createdAt)}</p>
           </Card>
 
-          <Card className="p-5 text-sm">
-            <p className="font-medium">Filed by</p>
-            <p className="mt-1 text-muted-foreground">{complaint.filedBy.fullName || "No name on file"}</p>
-            <p className="text-muted-foreground">{complaint.filedBy.email}</p>
-          </Card>
-
-          {complaint.linkedBooking && (
+          <div className="grid gap-4 sm:grid-cols-2">
             <Card className="p-5 text-sm">
-              <p className="font-medium">Linked booking</p>
-              <p className="mt-1 text-muted-foreground">
-                {complaint.linkedBooking.bookingNumber} • {complaint.linkedBooking.bookingStatus}
-              </p>
+              <p className="font-medium">Filed by</p>
+              <p className="mt-1 text-muted-foreground">{complaint.filedBy.fullName || "No name on file"}</p>
+              <p className="text-muted-foreground">{complaint.filedBy.email}</p>
             </Card>
-          )}
 
-          {complaint.linkedPayment && (
-            <Card className="p-5 text-sm">
-              <p className="font-medium">Linked payment</p>
-              <p className="mt-1 text-muted-foreground">
-                ₹{complaint.linkedPayment.amount} • {complaint.linkedPayment.status}
-              </p>
-            </Card>
-          )}
+            {complaint.linkedBooking && (
+              <Card className="p-5 text-sm">
+                <p className="font-medium">Linked booking</p>
+                <p className="mt-1 text-muted-foreground">
+                  {complaint.linkedBooking.bookingNumber} • {complaint.linkedBooking.bookingStatus}
+                </p>
+              </Card>
+            )}
+
+            {complaint.linkedPayment && (
+              <Card className="p-5 text-sm">
+                <p className="font-medium">Linked payment</p>
+                <p className="mt-1 text-muted-foreground">
+                  ₹{complaint.linkedPayment.amount} • {complaint.linkedPayment.status}
+                </p>
+              </Card>
+            )}
+          </div>
 
           {!complaint.linkedBooking && !complaint.linkedPayment && complaint.referenceId && (
             <p className="text-xs text-muted-foreground">Reference: {complaint.referenceId}</p>
@@ -130,7 +132,7 @@ export default function AdminComplaintDetailPage() {
 
           {actionable && (
             <div className="flex gap-2">
-              <Button disabled={busy} className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => setDialog("resolve")}>
+              <Button disabled={busy} className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => setDialog("resolve")}>
                 Resolve
               </Button>
               <Button disabled={busy} variant="outline" className="flex-1 text-destructive hover:text-destructive" onClick={() => setDialog("reject")}>

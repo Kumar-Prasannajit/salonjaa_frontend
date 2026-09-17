@@ -113,12 +113,12 @@ export default function SalonReviewsPage() {
   };
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-3xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 text-center text-lg font-semibold md:text-left md:text-2xl">Reviews</h1>
+        <h1 className="flex-1 text-center font-serif text-lg font-semibold md:text-left md:text-2xl">Reviews</h1>
         <div className="size-8" />
       </div>
 

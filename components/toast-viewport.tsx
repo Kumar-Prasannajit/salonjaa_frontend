@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 // Colors map straight onto the theme's own tokens (app/globals.css) — no new
 // palette introduced: success is --success (green), error is --destructive
-// (red), warning reuses --primary (the brand gold), info is neutral
+// (red), warning reuses --primary (the brand brass), info is neutral
 // card/foreground (the theme's white/black base in each mode).
 const VARIANT_STYLE: Record<ToastVariant, { icon: typeof CheckCircle2; className: string }> = {
   success: { icon: CheckCircle2, className: "border-success/40 text-success [&_svg]:text-success" },

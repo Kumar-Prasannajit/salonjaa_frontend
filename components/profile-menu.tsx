@@ -84,7 +84,7 @@ export function ProfileMenu({
 }: ProfileMenuProps) {
   return (
     <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-3xl md:px-10 md:py-12">
-      <h1 className="text-center text-lg font-semibold md:text-left md:text-2xl">Profile</h1>
+      <h1 className="text-center font-serif text-lg font-semibold md:text-left md:text-2xl">Profile</h1>
 
       <div className="mt-8 grid gap-8 md:grid-cols-[240px_1fr] md:items-start">
         {/* Sidebar on desktop, stacked header on mobile — same content either way. */}
@@ -93,7 +93,7 @@ export function ProfileMenu({
             <AvatarFallback className="bg-secondary text-lg font-semibold">{initials}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="text-lg font-semibold">{user?.name || "Not added yet"}</p>
+            <p className="font-serif text-lg font-semibold">{user?.name || "Not added yet"}</p>
             <p className="text-sm text-muted-foreground">{user?.phone || "No phone on file"}</p>
             <button
               type="button"
@@ -156,7 +156,7 @@ export function ProfileMenu({
                 <Button
                   type="submit"
                   disabled={busy}
-                  className="sm:col-span-2 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+                  className="sm:col-span-2 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
                 >
                   {busy ? "Saving…" : "Save changes"}
                 </Button>

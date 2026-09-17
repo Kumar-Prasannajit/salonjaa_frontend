@@ -169,8 +169,8 @@ export default function OwnerBookingsPage() {
   return (
     <main>
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Bookings</h1>
-        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/owner/bookings/walk-in")}>
+        <h1 className="font-serif text-lg font-semibold md:text-2xl">Bookings</h1>
+        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/owner/bookings/walk-in")}>
           <Plus className="size-4" />
           Walk-in
         </Button>
@@ -183,7 +183,7 @@ export default function OwnerBookingsPage() {
             type="button"
             onClick={() => setTab(t.key)}
             className={`shrink-0 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.key ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border text-muted-foreground"
+              tab === t.key ? "bg-gradient-to-r from-brass to-brass-bright text-primary-foreground" : "border border-border text-muted-foreground"
             }`}
           >
             {t.label}
@@ -212,18 +212,20 @@ export default function OwnerBookingsPage() {
           </Card>
         )}
 
-        {bookings?.map((b) => (
-          <SalonBookingCard
-            key={b.id}
-            booking={b}
-            busy={busyId === b.id}
-            onApprove={setApproveTarget}
-            onReject={setRejectTarget}
-            onRespondToReschedule={setRescheduleTarget}
-            onNoShow={markNoShow}
-            onComplete={markComplete}
-          />
-        ))}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {bookings?.map((b) => (
+            <SalonBookingCard
+              key={b.id}
+              booking={b}
+              busy={busyId === b.id}
+              onApprove={setApproveTarget}
+              onReject={setRejectTarget}
+              onRespondToReschedule={setRescheduleTarget}
+              onNoShow={markNoShow}
+              onComplete={markComplete}
+            />
+          ))}
+        </div>
       </div>
 
       <ReasonDialog

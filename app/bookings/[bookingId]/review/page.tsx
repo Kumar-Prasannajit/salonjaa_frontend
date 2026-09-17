@@ -166,9 +166,9 @@ export default function ReviewBookingPage() {
     return (
       <main className="mx-auto flex min-h-svh w-full max-w-md flex-col items-center justify-center bg-background px-5 py-8 text-center md:max-w-2xl">
         <CheckCircle2 className="size-12 text-success" />
-        <h1 className="mt-4 text-xl font-semibold">{existing ? "Review updated" : "Thanks for your review!"}</h1>
+        <h1 className="mt-4 font-serif text-xl font-semibold">{existing ? "Review updated" : "Thanks for your review!"}</h1>
         <div className="mt-6 flex w-full flex-col gap-3">
-          <Button className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push(`/reviews/salon/${booking.salonId}`)}>
+          <Button className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push(`/reviews/salon/${booking.salonId}`)}>
             See Salon Reviews
           </Button>
           <Button variant="outline" className="w-full" onClick={() => router.push("/bookings")}>
@@ -180,12 +180,12 @@ export default function ReviewBookingPage() {
   }
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-2xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 text-center text-lg font-semibold md:text-left md:text-2xl">{existing ? "Edit Review" : "Leave a Review"}</h1>
+        <h1 className="flex-1 text-center font-serif text-lg font-semibold md:text-left md:text-2xl">{existing ? "Edit Review" : "Leave a Review"}</h1>
         <div className="size-8" />
       </div>
 
@@ -235,7 +235,7 @@ export default function ReviewBookingPage() {
           </Alert>
         )}
 
-        <Button className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" disabled={busy} onClick={submit}>
+        <Button className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" disabled={busy} onClick={submit}>
           {busy ? "Submitting…" : existing ? "Update Review" : "Submit Review"}
         </Button>
       </div>

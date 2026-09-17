@@ -68,12 +68,12 @@ export default function BookingRequestedPage() {
   if (!bookingId) return null;
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-2xl">
       <div className="flex flex-col items-center text-center">
         <div className="grid size-16 place-items-center rounded-full border-2 border-primary/60">
           <Clock className="size-8 text-primary" strokeWidth={1.5} />
         </div>
-        <h1 className="mt-4 text-2xl font-bold text-primary">Booking Requested!</h1>
+        <h1 className="mt-4 font-serif text-2xl font-semibold text-primary">Booking requested</h1>
         <p className="mt-2 max-w-xs text-sm text-muted-foreground">
           {advanceAmount !== null
             ? "The salon can't review this request until your advance payment clears — pay it now to move things along."
@@ -154,14 +154,14 @@ export default function BookingRequestedPage() {
       <div className="mt-8 space-y-3">
         {advanceAmount !== null && (
           <Button
-            className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+            className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
             onClick={() => router.push(`/bookings/${bookingId}/pay`)}
           >
             Pay ₹{advanceAmount} Advance Now
           </Button>
         )}
         <Button
-          className={advanceAmount !== null ? "w-full" : "w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"}
+          className={advanceAmount !== null ? "w-full" : "w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"}
           variant={advanceAmount !== null ? "outline" : undefined}
           onClick={() => router.push("/bookings")}
         >

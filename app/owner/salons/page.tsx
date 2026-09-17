@@ -47,8 +47,8 @@ export default function OwnerSalonsPage() {
   return (
     <main>
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold md:text-2xl">Your Salons</h1>
-        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/owner/salons/new")}>
+        <h1 className="font-serif text-lg font-semibold md:text-2xl">Your Salons</h1>
+        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/owner/salons/new")}>
           <Plus className="size-4" />
           New Salon
         </Button>
@@ -76,15 +76,17 @@ export default function OwnerSalonsPage() {
           </Card>
         )}
 
-        {salons?.map((s) => (
-          <Card key={s.id} className="cursor-pointer gap-1 p-4 transition-colors hover:bg-accent/40" onClick={() => router.push(`/owner/salons/${s.id}`)}>
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">{s.name}</p>
-              <Badge variant={VERIFICATION_VARIANT[s.verificationStatus]}>{s.verificationStatus}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">Status: {s.status}</p>
-          </Card>
-        ))}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {salons?.map((s) => (
+            <Card key={s.id} className="cursor-pointer gap-1 p-4 transition-colors hover:bg-accent/40" onClick={() => router.push(`/owner/salons/${s.id}`)}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold">{s.name}</p>
+                <Badge variant={VERIFICATION_VARIANT[s.verificationStatus]}>{s.verificationStatus}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">Status: {s.status}</p>
+            </Card>
+          ))}
+        </div>
       </div>
     </main>
   );

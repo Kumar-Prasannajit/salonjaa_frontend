@@ -57,12 +57,12 @@ function WalletContent() {
   }, []);
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-2xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => router.push("/profile")} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 text-center text-lg font-semibold md:text-left md:text-2xl">My Wallet</h1>
+        <h1 className="flex-1 text-center font-serif text-lg font-semibold md:text-left md:text-2xl">My Wallet</h1>
         <div className="size-8" />
       </div>
 
@@ -73,7 +73,7 @@ function WalletContent() {
       )}
 
       {!error && (
-        <Card className="mt-6 flex flex-col items-center gap-2 bg-gradient-to-r from-gold to-gold-bright p-6 text-center text-primary-foreground">
+        <Card className="mt-6 flex flex-col items-center gap-2 bg-gradient-to-r from-brass to-brass-bright p-6 text-center text-primary-foreground">
           <WalletIcon className="size-6" strokeWidth={1.5} />
           {wallet ? (
             <p className="text-3xl font-bold">₹{wallet.balance}</p>
@@ -85,7 +85,7 @@ function WalletContent() {
       )}
 
       <div className="mt-6 space-y-3">
-        <h2 className="font-semibold">Transaction History</h2>
+        <h2 className="font-serif text-lg font-semibold">Transaction History</h2>
 
         {!error && transactions === null && (
           <>

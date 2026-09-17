@@ -110,12 +110,12 @@ export default function SelectServicesPage() {
   };
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 pb-32 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 pb-32 md:max-w-2xl md:px-10 md:py-12 lg:max-w-4xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 text-center text-lg font-semibold md:text-left md:text-2xl">Select Services</h1>
+        <h1 className="flex-1 text-center font-serif text-lg font-semibold md:text-left md:text-2xl">Select Services</h1>
         <div className="size-8" />
       </div>
 
@@ -169,8 +169,8 @@ export default function SelectServicesPage() {
             </div>
           )}
 
-          <div className="mt-4 space-y-3">
-            {visibleServices.length === 0 && <p className="text-sm text-muted-foreground">No services in this category.</p>}
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {visibleServices.length === 0 && <p className="text-sm text-muted-foreground lg:col-span-2">No services in this category.</p>}
             {visibleServices.map((s) => {
               const hasVariants = s.variants.length > 0;
               const sel = selections.get(s.id);
@@ -197,7 +197,7 @@ export default function SelectServicesPage() {
                     </div>
                     <div
                       className={`grid size-8 shrink-0 place-items-center rounded-full ${
-                        isSelected ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border"
+                        isSelected ? "bg-gradient-to-r from-brass to-brass-bright text-primary-foreground" : "border border-border"
                       }`}
                     >
                       {isSelected ? (
@@ -238,7 +238,7 @@ export default function SelectServicesPage() {
             })}
           </div>
 
-          <div className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md space-y-3 border-t border-border bg-background p-4 md:max-w-2xl">
+          <div className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md space-y-3 border-t border-border bg-background p-4 md:max-w-2xl lg:max-w-4xl">
             {selected.length > 0 && (
               <div className="flex items-center gap-3 text-sm">
                 <Calendar className="size-5 shrink-0 text-primary" />
@@ -252,7 +252,7 @@ export default function SelectServicesPage() {
               </div>
             )}
             <Button
-              className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+              className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
               disabled={selected.length === 0}
               onClick={next}
             >

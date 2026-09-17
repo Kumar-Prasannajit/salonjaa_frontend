@@ -63,19 +63,19 @@ export default function ChooseStylistPage() {
   };
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-3xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 text-center text-lg font-semibold md:text-left md:text-2xl">Choose Your Professional</h1>
+        <h1 className="flex-1 text-center font-serif text-lg font-semibold md:text-left md:text-2xl">Choose Your Professional</h1>
         <div className="size-8" />
       </div>
       <p className="mt-1 text-center text-sm text-muted-foreground md:text-left">Select the best professional for you</p>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="sm:col-span-2">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -83,7 +83,7 @@ export default function ChooseStylistPage() {
         {!error && staff === null && Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
 
         {staff !== null && staff.length === 0 && (
-          <Card className="flex flex-col items-center gap-3 border-dashed p-10 text-center">
+          <Card className="flex flex-col items-center gap-3 border-dashed p-10 text-center sm:col-span-2">
             <User className="size-8 text-accent" />
             <p className="font-semibold">No eligible stylist available</p>
             <p className="text-sm text-muted-foreground">You can still continue — a stylist will be assigned by the salon.</p>
@@ -132,7 +132,7 @@ export default function ChooseStylistPage() {
           Skip
         </Button>
         <Button
-          className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+          className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
           disabled={!selected}
           onClick={() => selected && proceed(selected.staffId, selected.name)}
         >

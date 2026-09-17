@@ -82,7 +82,7 @@ export default function HomePage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 17 ? "Afternoon" : "Evening"},</p>
-          <p className="text-xl font-bold">Looking Good! ✨</p>
+          <p className="font-serif text-2xl font-semibold md:text-3xl">Looking good, as always.</p>
         </div>
         <button type="button" onClick={() => router.push("/profile")} aria-label="Profile">
           <Avatar size="lg" className="border-2 border-primary/40">
@@ -127,37 +127,37 @@ export default function HomePage() {
         </button>
       </form>
 
-      <div className="mt-8 flex items-center justify-between">
-        <h2 className="font-semibold">Popular Near You</h2>
+      <div className="mt-10 flex items-center justify-between">
+        <h2 className="font-serif text-xl font-semibold md:text-2xl">Popular near you</h2>
         <button type="button" onClick={() => router.push("/explore")} className="text-sm font-medium text-primary">
           See all
         </button>
       </div>
 
-      <div className="mt-3">
+      <div className="mt-4">
         {branchesError && (
           <Alert variant="destructive">
             <AlertDescription>{branchesError}</AlertDescription>
           </Alert>
         )}
         {!branchesError && branches === null && (
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            <Skeleton className="h-44 w-44 shrink-0 rounded-xl" />
-            <Skeleton className="h-44 w-44 shrink-0 rounded-xl" />
+          <div className="flex gap-4 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3 xl:grid-cols-4">
+            <Skeleton className="h-44 w-44 shrink-0 rounded-xl sm:h-64 sm:w-full" />
+            <Skeleton className="h-44 w-44 shrink-0 rounded-xl sm:h-64 sm:w-full" />
           </div>
         )}
         {branches !== null && branches.length === 0 && <p className="text-sm text-muted-foreground">No salons found near you yet.</p>}
         {branches !== null && branches.length > 0 && (
-          <div className="flex gap-3 overflow-x-auto pb-1">
-            {branches.slice(0, 6).map((b) => (
+          <div className="flex gap-4 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+            {branches.slice(0, 8).map((b) => (
               <SalonCard key={b.branchId} branch={b} variant="grid" />
             ))}
           </div>
         )}
       </div>
 
-      <div className="mt-8 flex items-center justify-between">
-        <h2 className="font-semibold">Top Services</h2>
+      <div className="mt-10 flex items-center justify-between">
+        <h2 className="font-serif text-xl font-semibold md:text-2xl">Top services</h2>
         <button type="button" onClick={() => router.push("/explore")} className="text-sm font-medium text-primary">
           See all
         </button>

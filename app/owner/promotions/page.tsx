@@ -9,7 +9,7 @@ import { PromotionsManager } from "@/components/owner/promotions-manager";
 export default function OwnerPromotionsPage() {
   return (
     <main>
-      <h1 className="text-lg font-semibold md:text-2xl">Promotions</h1>
+      <h1 className="font-serif text-lg font-semibold md:text-2xl">Promotions</h1>
       <div className="mt-6">
         <PromotionsManager />
       </div>

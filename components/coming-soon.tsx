@@ -19,7 +19,7 @@ export function ComingSoon({
       <Card className="flex size-16 items-center justify-center rounded-2xl border-primary/40 bg-card/60">
         <Icon className="size-7 text-primary" strokeWidth={1.5} />
       </Card>
-      <h1 className="text-xl font-semibold">{title}</h1>
+      <h1 className="font-serif text-xl font-semibold">{title}</h1>
       <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">{description}</p>
     </main>
   );

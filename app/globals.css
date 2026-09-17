@@ -2,74 +2,82 @@
 @import "tw-animate-css";
 
 /*
- * Design tokens sourced from docs/designs/*.jpeg. Originally this app shipped
- * dark-only (see git history) because all 12 numbered screens only existed in
- * a dark charcoal + gold system. docs/designs/light_mode_all_pages.jpeg later
- * supplied a full light variant of every screen, so this is now a real
- * two-theme system: :root holds the light palette (default), .dark overrides
- * it. Toggled via next-themes (class strategy) — see components/theme-provider.tsx
- * and components/theme-toggle.tsx. Values are close visual approximations of
- * the screenshots, not exact pixel-sampled hex codes, same as before.
+ * Book My Charm design tokens. Replaces the earlier "Salonjaa" gold-on-cream
+ * system with a palette grounded in the brand's actual crest logo (a
+ * copper-bronze/rose-gold crown-and-crest mark, not flat yellow-gold) — see
+ * the 2026-09 rebrand: --brass/--brass-bright/--brass-deep are sampled from
+ * that mark's metallic gradient, not an arbitrary "luxury gold." The client's
+ * own stated preference is black+gold/brass in dark mode, white+gold/brass in
+ * light mode — both themes keep warm near-neutrals (never cool grey) so nothing
+ * reads as generic SaaS chrome. Emerald/wine are the two jewel accents used
+ * strictly for semantic success/destructive state, never decoration.
  */
 :root {
   --radius: 1rem;
 
-  --background: #fbf7ef;
-  --foreground: #201807;
+  --background: #fbf8f3;
+  --foreground: #1e1912;
   --card: #ffffff;
-  --card-foreground: #201807;
+  --card-foreground: #1e1912;
   --popover: #ffffff;
-  --popover-foreground: #201807;
-  --primary: #b8842a;
-  --primary-foreground: #201807;
-  --secondary: #f2e9d8;
-  --secondary-foreground: #201807;
-  --muted: #f5efe4;
-  --muted-foreground: #6b6255;
-  --accent: #b8842a;
-  --accent-foreground: #201807;
-  --destructive: #c13b32;
+  --popover-foreground: #1e1912;
+  --primary: #96723a;
+  --primary-foreground: #ffffff;
+  --secondary: #f1e8d8;
+  --secondary-foreground: #1e1912;
+  --muted: #f4efe4;
+  --muted-foreground: #6e6455;
+  --accent: #96723a;
+  --accent-foreground: #ffffff;
+  --destructive: #7a2e2e;
   --destructive-foreground: #ffffff;
-  --border: #e7dcc7;
-  --input: #e7dcc7;
-  --ring: #b8842a;
+  --border: #e6dbc6;
+  --input: #e6dbc6;
+  --ring: #96723a;
 
   /* Success text color: "Confirmed" status, discount amounts. No shadcn
      equivalent by default — kept as a named extension. */
-  --success: #4f7a34;
+  --success: #1f4635;
 
-  /* The two-stop gradient used on every primary CTA pill in the designs
-     (e.g. "Book Now", "Pay ₹1,000"). Brand-constant gold, same in both
-     themes — only --primary/--accent (text/icon gold) shift for contrast. */
-  --gold: #d9a044;
-  --gold-bright: #e9c17a;
+  /* The brand's copper-bronze metallic gradient (sampled from the crest
+     logo), used on every primary CTA pill and the wordmark. brass-deep is
+     the pressed/shadow stop. Same three stops in both themes — only
+     --primary/--accent (text/icon brass) shift for per-theme contrast. */
+  --brass-deep: #7a4f2c;
+  --brass: #a9713f;
+  --brass-bright: #d9a87a;
 
-  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
   --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
 .dark {
-  --background: #0c0d10;
-  --foreground: #f5f3ef;
-  --card: #17181d;
-  --card-foreground: #f5f3ef;
-  --popover: #17181d;
-  --popover-foreground: #f5f3ef;
-  --primary: #d9a044;
+  --background: #0e0c09;
+  --foreground: #f3ecdf;
+  --card: #17130d;
+  --card-foreground: #f3ecdf;
+  --popover: #17130d;
+  --popover-foreground: #f3ecdf;
+  --primary: #d9a87a;
   --primary-foreground: #1a1206;
-  --secondary: #202126;
-  --secondary-foreground: #f5f3ef;
-  --muted: #1c1d22;
-  --muted-foreground: #9a9893;
-  --accent: #e9c17a;
+  --secondary: #221c13;
+  --secondary-foreground: #f3ecdf;
+  --muted: #1c170f;
+  --muted-foreground: #a89a85;
+  --accent: #d9a87a;
   --accent-foreground: #1a1206;
-  --destructive: #e0473f;
+  --destructive: #c1584f;
   --destructive-foreground: #ffffff;
-  --border: #26272c;
-  --input: #26272c;
-  --ring: #d9a044;
+  --border: #2b2417;
+  --input: #2b2417;
+  --ring: #d9a87a;
 
-  --success: #9bc46a;
+  --success: #4d9575;
+
+  --brass-deep: #a9713f;
+  --brass: #d9a87a;
+  --brass-bright: #efc894;
 }
 
 @theme inline {
@@ -93,11 +101,15 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-success: var(--success);
-  --color-gold: var(--gold);
-  --color-gold-bright: var(--gold-bright);
+  --color-brass-deep: var(--brass-deep);
+  --color-brass: var(--brass);
+  --color-brass-bright: var(--brass-bright);
 
   --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
+
+  --breakpoint-xs: 30rem;
 
   --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 4px);

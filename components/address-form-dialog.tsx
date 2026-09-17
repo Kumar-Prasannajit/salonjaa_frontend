@@ -110,7 +110,7 @@ export function AddressFormDialog({
           <Button
             type="submit"
             disabled={busy}
-            className="sm:col-span-2 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"
+            className="sm:col-span-2 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"
           >
             {busy ? "Saving…" : "Save address"}
           </Button>

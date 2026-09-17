@@ -83,7 +83,7 @@ export function ReasonDialog({
             <Button
               type="submit"
               variant={destructive ? "destructive" : "default"}
-              className={destructive ? "flex-1" : "flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90"}
+              className={destructive ? "flex-1" : "flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90"}
               disabled={busy}
             >
               {busy ? "Submitting…" : confirmLabel}

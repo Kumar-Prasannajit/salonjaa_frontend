@@ -125,7 +125,7 @@ export function SalonBookingCard({
         <div className="mt-4 flex flex-wrap gap-2">
           {canDecide && (
             <>
-              <Button size="sm" className="flex-1 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" disabled={busy} onClick={() => onApprove(booking)}>
+              <Button size="sm" className="flex-1 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" disabled={busy} onClick={() => onApprove(booking)}>
                 Approve
               </Button>
               <Button size="sm" variant="outline" className="flex-1 text-destructive hover:text-destructive" disabled={busy} onClick={() => onReject(booking)}>

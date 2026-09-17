@@ -59,8 +59,9 @@ navigated to it in this session.
 
 For every failure found: fix it if it's a real bug in already-documented
 frontend behavior; if it looks like a genuine backend contract gap or an
-undecided policy (check docs/context.md's Pending Decisions and
-docs/KNOWN_BACKEND_LIMITATIONS.md first), don't invent a workaround — write it
+undecided policy (check `../../context.md`'s Pending Decisions and
+`../../KNOWN_BACKEND_LIMITATIONS.md` first — both now at the project root,
+shared with the backend repo), don't invent a workaround — write it
 up instead the same way KNOWN_BACKEND_LIMITATIONS.md's existing entries are
 written (what's expected, what actually happens, why).
 

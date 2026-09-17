@@ -41,7 +41,7 @@ export default function AdminSalonsPage() {
 
   return (
     <main>
-      <h1 className="text-lg font-semibold md:text-2xl">Salon Approval Queue</h1>
+      <h1 className="font-serif text-lg font-semibold md:text-2xl">Salon Approval Queue</h1>
 
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {TABS.map((t) => (
@@ -50,7 +50,7 @@ export default function AdminSalonsPage() {
             type="button"
             onClick={() => setTab(t.key)}
             className={`shrink-0 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
-              tab === t.key ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border text-muted-foreground"
+              tab === t.key ? "bg-gradient-to-r from-brass to-brass-bright text-primary-foreground" : "border border-border text-muted-foreground"
             }`}
           >
             {t.label}
@@ -79,15 +79,17 @@ export default function AdminSalonsPage() {
           </Card>
         )}
 
-        {salons?.map((s) => (
-          <Card key={s.id} className="cursor-pointer gap-1 p-4 transition-colors hover:bg-accent/40" onClick={() => router.push(`/admin/salons/${s.id}`)}>
-            <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">{s.name}</p>
-              <Badge variant={VARIANT[s.verificationStatus]}>{s.verificationStatus}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">{s.ownerProfile.businessName || "No business name on file"}</p>
-          </Card>
-        ))}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {salons?.map((s) => (
+            <Card key={s.id} className="cursor-pointer gap-1 p-4 transition-colors hover:bg-accent/40" onClick={() => router.push(`/admin/salons/${s.id}`)}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold">{s.name}</p>
+                <Badge variant={VARIANT[s.verificationStatus]}>{s.verificationStatus}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">{s.ownerProfile.businessName || "No business name on file"}</p>
+            </Card>
+          ))}
+        </div>
       </div>
     </main>
   );

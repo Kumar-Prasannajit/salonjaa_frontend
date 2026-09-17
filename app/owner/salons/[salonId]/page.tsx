@@ -109,7 +109,7 @@ export default function OwnerSalonDetailPage() {
         <button type="button" onClick={() => router.push("/owner/salons")} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 truncate text-lg font-semibold md:text-2xl">{salon?.name || "Salon"}</h1>
+        <h1 className="flex-1 truncate font-serif text-lg font-semibold md:text-2xl">{salon?.name || "Salon"}</h1>
       </div>
 
       {loadError && (
@@ -126,7 +126,7 @@ export default function OwnerSalonDetailPage() {
       )}
 
       {salon && (
-        <div className="mt-6 space-y-6">
+        <div className="mt-6 max-w-5xl space-y-6">
           <Card className="p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export default function OwnerSalonDetailPage() {
                   <Label htmlFor="edit-salon-cover">Cover image URL</Label>
                   <Input id="edit-salon-cover" value={form.coverImage} onChange={(e) => setForm({ ...form, coverImage: e.target.value })} />
                 </div>
-                <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+                <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
                   {busy ? "Saving…" : "Save changes"}
                 </Button>
               </form>
@@ -184,17 +184,17 @@ export default function OwnerSalonDetailPage() {
 
           <div>
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Branches</h2>
-              <Button size="sm" className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push(`/owner/salons/${salonId}/branches/new`)}>
+              <h2 className="font-serif text-lg font-semibold">Branches</h2>
+              <Button size="sm" className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push(`/owner/salons/${salonId}/branches/new`)}>
                 <Plus className="size-4" />
                 New Branch
               </Button>
             </div>
 
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {branches === null && <Skeleton className="h-16 w-full rounded-xl" />}
               {branches?.length === 0 && (
-                <Card className="flex flex-col items-center gap-3 border-dashed p-8 text-center">
+                <Card className="flex flex-col items-center gap-3 border-dashed p-8 text-center sm:col-span-2">
                   <MapPinned className="size-7 text-accent" />
                   <p className="font-semibold">No branches yet</p>
                   <p className="text-sm text-muted-foreground">A salon needs at least one branch to take bookings.</p>

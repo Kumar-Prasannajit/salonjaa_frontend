@@ -47,7 +47,7 @@ export function SalonAnalyticsCard({ salonId }: { salonId: string }) {
     <Card className="p-5">
       <div className="flex items-center gap-2">
         <BarChart3 className="size-4 text-primary" />
-        <h2 className="font-semibold">Analytics</h2>
+        <h2 className="font-serif font-semibold">Analytics</h2>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">

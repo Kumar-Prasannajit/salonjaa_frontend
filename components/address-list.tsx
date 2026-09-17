@@ -10,7 +10,7 @@ import type { UseAccountReturn } from "@/hooks/use-account";
 // No design screen exists for this one — docs/designs/11-user-profile.jpeg
 // only shows "Saved Addresses" as a menu row, with no drill-down screen
 // provided. Extrapolated from the same card-list language the Bookings
-// (#12) and Profile (#11) screens use: bordered charcoal cards, gold
+// (#12) and Profile (#11) screens use: bordered charcoal cards, brass
 // accent for the default badge, ghost icon-buttons for edit/remove.
 type AddressListProps = Pick<UseAccountReturn, "addresses" | "beginAddress" | "removeAddress" | "error" | "notice"> & {
   onBack: () => void;
@@ -18,35 +18,35 @@ type AddressListProps = Pick<UseAccountReturn, "addresses" | "beginAddress" | "r
 
 export function AddressList({ addresses, beginAddress, removeAddress, error, notice, onBack }: AddressListProps) {
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-4xl">
       <div className="flex items-center gap-3">
         <button type="button" onClick={onBack} aria-label="Back to profile" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="flex-1 text-center text-lg font-semibold md:text-left md:text-2xl">Saved Addresses</h1>
-        <Button size="icon" className="rounded-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" onClick={() => beginAddress()}>
+        <h1 className="flex-1 text-center font-serif text-lg font-semibold md:text-left md:text-2xl">Saved Addresses</h1>
+        <Button size="icon" className="rounded-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground" onClick={() => beginAddress()}>
           <Plus className="size-4" />
         </Button>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="lg:col-span-2">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
         {notice && (
-          <Alert className="border-success/40 text-success [&_svg]:text-success">
+          <Alert className="border-success/40 text-success [&_svg]:text-success lg:col-span-2">
             <AlertDescription>{notice}</AlertDescription>
           </Alert>
         )}
 
         {addresses.length === 0 ? (
-          <Card className="flex flex-col items-center gap-3 border-dashed p-10 text-center">
+          <Card className="flex flex-col items-center gap-3 border-dashed p-10 text-center lg:col-span-2">
             <MapPinned className="size-8 text-accent" />
             <p className="font-semibold">No saved places</p>
             <p className="text-sm text-muted-foreground">Add an address to make future appointments effortless.</p>
-            <Button onClick={() => beginAddress()} className="bg-gradient-to-r from-gold to-gold-bright text-primary-foreground">
+            <Button onClick={() => beginAddress()} className="bg-gradient-to-r from-brass to-brass-bright text-primary-foreground">
               Add an address
             </Button>
           </Card>
@@ -58,7 +58,7 @@ export function AddressList({ addresses, beginAddress, removeAddress, error, not
                   <div className="flex items-center gap-2">
                     <p className="font-semibold">{a.label || "Address"}</p>
                     {a.isDefault && (
-                      <Badge className="bg-gold/20 text-primary hover:bg-gold/20">Default</Badge>
+                      <Badge className="bg-brass/20 text-primary hover:bg-brass/20">Default</Badge>
                     )}
                   </div>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">

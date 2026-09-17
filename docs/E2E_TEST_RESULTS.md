@@ -139,7 +139,8 @@ All 3 backend bugs were fixed in `../salonjaa-backend` and re-verified live agai
    `customerName: null` alongside the real `customerId`.
 
 Full detail (including the original repro steps) in
-[`KNOWN_BACKEND_LIMITATIONS.md`](./KNOWN_BACKEND_LIMITATIONS.md), each marked `~~...~~ — Fixed`.
+[`KNOWN_BACKEND_LIMITATIONS.md`](../../KNOWN_BACKEND_LIMITATIONS.md) (now at the project root,
+shared with the backend repo), each marked `~~...~~ — Fixed`.
 
 ## New frontend features built (reasonable defaults chosen, no design mockups existed)
 

@@ -157,8 +157,8 @@ export function StaffManager({ branchId }: { branchId: string }) {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold">Staff</h2>
-        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={openCreate}>
+        <h2 className="font-serif font-semibold">Staff</h2>
+        <Button size="sm" className="gap-1.5 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={openCreate}>
           <Plus className="size-4" />
           Add Staff
         </Button>
@@ -221,7 +221,7 @@ export function StaffManager({ branchId }: { branchId: string }) {
                     <AlertDescription>{leaveError}</AlertDescription>
                   </Alert>
                 )}
-                <form onSubmit={addLeave} className="grid grid-cols-2 gap-2">
+                <form onSubmit={addLeave} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label htmlFor={`leave-start-${s.id}`} className="text-xs">
                       Start
@@ -252,7 +252,7 @@ export function StaffManager({ branchId }: { branchId: string }) {
                     </Label>
                     <Input id={`leave-reason-${s.id}`} value={leaveForm.reason} onChange={(e) => setLeaveForm({ ...leaveForm, reason: e.target.value })} />
                   </div>
-                  <Button type="submit" size="sm" disabled={leaveBusy} className="col-span-2 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+                  <Button type="submit" size="sm" disabled={leaveBusy} className="col-span-2 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
                     {leaveBusy ? "Adding…" : "Add leave"}
                   </Button>
                 </form>
@@ -303,7 +303,7 @@ export function StaffManager({ branchId }: { branchId: string }) {
                 <Input id="staff-salary" type="number" min="0" value={form.salary} onChange={(e) => setForm({ ...form, salary: e.target.value })} />
               </div>
             </div>
-            <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90">
+            <Button type="submit" disabled={busy} className="w-full bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
               {busy ? "Saving…" : editing ? "Save changes" : "Add staff"}
             </Button>
           </form>

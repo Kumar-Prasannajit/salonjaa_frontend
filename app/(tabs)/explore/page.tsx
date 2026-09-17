@@ -73,8 +73,8 @@ function ExploreContent() {
   }, [debouncedQuery, serviceCategoryId, salonId, sort, geo.coords]);
 
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12">
-      <h1 className="text-lg font-semibold md:text-2xl">{salonId ? `${salonName || "Salon"} — Other Branches` : "Nearby Salons"}</h1>
+    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-5xl">
+      <h1 className="font-serif text-lg font-semibold md:text-2xl">{salonId ? `${salonName || "Salon"} — Other Branches` : "Nearby Salons"}</h1>
 
       <div className="relative mt-4">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -88,7 +88,7 @@ function ExploreContent() {
             type="button"
             onClick={() => setSort(s.key)}
             className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-              sort === s.key ? "bg-gradient-to-r from-gold to-gold-bright text-primary-foreground" : "border border-border text-muted-foreground"
+              sort === s.key ? "bg-gradient-to-r from-brass to-brass-bright text-primary-foreground" : "border border-border text-muted-foreground"
             }`}
           >
             {s.label}
@@ -132,9 +132,11 @@ function ExploreContent() {
           </Card>
         )}
 
-        {branches?.map((b) => (
-          <SalonCard key={b.branchId} branch={b} variant="row" />
-        ))}
+        <div className="grid gap-3 lg:grid-cols-2">
+          {branches?.map((b) => (
+            <SalonCard key={b.branchId} branch={b} variant="row" />
+          ))}
+        </div>
       </div>
     </main>
   );

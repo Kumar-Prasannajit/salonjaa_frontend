@@ -16,10 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // POST /salon-bookings/:id/propose-reschedule — the salon-initiated
 // counterpart to the customer's app/bookings/[bookingId]/reschedule/page.tsx,
-// reusing the exact same SlotPicker + GET /availability/slots. PROGRESS.md's
-// Module 6 note: there's no endpoint yet for the customer to accept/reject a
-// salon-proposed reschedule, so this only creates the request — it sits
-// PENDING until that ships.
+// reusing the exact same SlotPicker + GET /availability/slots. The customer
+// accept/reject flow (BUG-009 fix) is live — components/booking-card.tsx's
+// RespondToRescheduleDialog handles it — this screen only creates the
+// request, which then sits PENDING until the customer responds.
 export default function ProposeRescheduleBookingPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const router = useRouter();
@@ -62,8 +62,8 @@ export default function ProposeRescheduleBookingPage() {
       <main className="flex min-h-[70svh] flex-col items-center justify-center text-center">
         <CheckCircle2 className="size-12 text-success" />
         <h1 className="mt-4 text-xl font-semibold">Reschedule proposed</h1>
-        <p className="mt-2 max-w-xs text-sm text-muted-foreground">The customer&apos;s original appointment stays confirmed until they accept — there&apos;s no accept flow yet, so it sits pending.</p>
-        <Button className="mt-6 bg-gradient-to-r from-gold to-gold-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/owner/bookings")}>
+        <p className="mt-2 max-w-xs text-sm text-muted-foreground">The customer&apos;s original appointment stays confirmed until they respond — they&apos;ll see the new time in their bookings and can accept or decline it there.</p>
+        <Button className="mt-6 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90" onClick={() => router.push("/owner/bookings")}>
           Back to Bookings
         </Button>
       </main>
@@ -76,7 +76,7 @@ export default function ProposeRescheduleBookingPage() {
         <button type="button" onClick={() => router.back()} aria-label="Back" className="rounded-full border border-border p-2">
           <ArrowLeft className="size-4" />
         </button>
-        <h1 className="text-lg font-semibold md:text-2xl">Propose Reschedule</h1>
+        <h1 className="font-serif text-lg font-semibold md:text-2xl">Propose Reschedule</h1>
       </div>
 
       {loadError && (
