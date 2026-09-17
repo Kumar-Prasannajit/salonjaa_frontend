@@ -22,7 +22,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { UseAccountReturn } from "@/hooks/use-account";
 
 // Matches docs/designs/11-user-profile.jpeg: avatar + name/phone header,
-// then two grouped nav-row cards, then a destructive logout row. The design
+// then grouped nav destinations, then a destructive logout row. The design
 // shows "Edit Profile" and "Saved Addresses" as navigation targets (separate
 // screens not included in the designs); here they expand in place instead,
 // since there's no router in scope for this refactor.
@@ -31,6 +31,13 @@ import type { UseAccountReturn } from "@/hooks/use-account";
 // GET /users/me returns both fields but PATCH /users/me only accepts
 // fullName/gender/dob, so there is no way for a user to ever set either one
 // today (see frontend/CLAUDE.md).
+//
+// 2026-09 desktop rebuild: was capped at max-w-3xl with a single narrow
+// stacked list of nav rows and its own min-h-svh — read as a mobile screen
+// stretched wide, not a real desktop account page. Nav destinations are now
+// a tile grid (2-up at sm, matching how Amazon/Urban Company lay out "Your
+// Account"), and the page uses the width TabsLayout already gives it instead
+// of re-capping itself.
 type ProfileMenuProps = Pick<
   UseAccountReturn,
   | "user"
@@ -83,27 +90,30 @@ export function ProfileMenu({
   onOpenAdminDashboard,
 }: ProfileMenuProps) {
   return (
-    <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-3xl md:px-10 md:py-12">
-      <h1 className="text-center font-serif text-lg font-semibold md:text-left md:text-2xl">Profile</h1>
+    <main className="mx-auto w-full px-5 py-8 md:px-0 md:py-14">
+      <h1 className="text-center font-serif text-lg font-semibold md:text-left md:text-3xl">My Account</h1>
 
-      <div className="mt-8 grid gap-8 md:grid-cols-[240px_1fr] md:items-start">
-        {/* Sidebar on desktop, stacked header on mobile — same content either way. */}
-        <div className="flex items-center gap-4 md:flex-col md:items-start md:gap-3">
+      <div className="mt-8 grid gap-8 md:grid-cols-[280px_1fr] md:items-start">
+        {/* Profile summary card: stacked header on mobile, sidebar card on desktop. */}
+        <Card className="flex items-center gap-4 p-5 md:flex-col md:items-start md:gap-4 md:p-6">
           <Avatar className="size-16 border border-border md:size-20">
             <AvatarFallback className="bg-secondary text-lg font-semibold">{initials}</AvatarFallback>
           </Avatar>
-          <div>
-            <p className="font-serif text-lg font-semibold">{user?.name || "Not added yet"}</p>
+          <div className="min-w-0">
+            <p className="truncate font-serif text-lg font-semibold">{user?.name || "Not added yet"}</p>
             <p className="text-sm text-muted-foreground">{user?.phone || "No phone on file"}</p>
-            <button
-              type="button"
-              onClick={() => setEditProfile((v) => !v)}
-              className="mt-1 text-sm font-medium text-primary underline-offset-2 hover:underline"
-            >
-              {editProfile ? "Cancel" : "Edit Profile"}
-            </button>
+            <p className="mt-1 truncate text-xs text-muted-foreground">{user?.email}</p>
           </div>
-        </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setEditProfile((v) => !v)}
+            className="w-full shrink-0 md:mt-2 md:w-full"
+          >
+            {editProfile ? "Cancel" : "Edit Profile"}
+          </Button>
+        </Card>
 
         <div className="space-y-6">
           {error && (
@@ -165,28 +175,34 @@ export function ProfileMenu({
           ) : (
             <>
               {(isSalonOwner || isAdmin) && (
-                <Card className="divide-y divide-border overflow-hidden p-0">
-                  {isSalonOwner && <NavRow icon={Store} label="Owner Dashboard" onClick={onOpenOwnerDashboard} />}
-                  {isAdmin && <NavRow icon={Shield} label="Admin Dashboard" onClick={onOpenAdminDashboard} />}
-                </Card>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {isSalonOwner && <NavTile icon={Store} label="Owner Dashboard" onClick={onOpenOwnerDashboard} />}
+                  {isAdmin && <NavTile icon={Shield} label="Admin Dashboard" onClick={onOpenAdminDashboard} />}
+                </div>
               )}
 
-              <Card className="divide-y divide-border overflow-hidden p-0">
-                <NavRow icon={MapPin} label="Saved Addresses" onClick={onOpenAddresses} />
-                {/* Module 20 — GET /wallet, now a real, live feature. */}
-                <NavRow icon={Wallet} label="My Wallet" onClick={onOpenWallet} />
-                {/* Module 23 — POST /bookings/claim, entirely new feature. */}
-                <NavRow icon={Ticket} label="Claim a Walk-in Booking" onClick={onClaimBooking} />
-                {COMING_SOON.map((item) => (
-                  <NavRow key={item.label} {...item} disabled />
-                ))}
-              </Card>
+              <div>
+                <p className="mb-3 text-sm font-semibold text-muted-foreground">Bookings & Payments</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <NavTile icon={MapPin} label="Saved Addresses" onClick={onOpenAddresses} />
+                  {/* Module 20 — GET /wallet, now a real, live feature. */}
+                  <NavTile icon={Wallet} label="My Wallet" onClick={onOpenWallet} />
+                  {/* Module 23 — POST /bookings/claim, entirely new feature. */}
+                  <NavTile icon={Ticket} label="Claim a Walk-in Booking" onClick={onClaimBooking} />
+                  {COMING_SOON.map((item) => (
+                    <NavTile key={item.label} {...item} disabled />
+                  ))}
+                </div>
+              </div>
 
-              <Card className="divide-y divide-border overflow-hidden p-0">
-                {COMING_SOON_SECONDARY.map((item) => (
-                  <NavRow key={item.label} {...item} disabled />
-                ))}
-              </Card>
+              <div>
+                <p className="mb-3 text-sm font-semibold text-muted-foreground">More</p>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {COMING_SOON_SECONDARY.map((item) => (
+                    <NavTile key={item.label} {...item} disabled />
+                  ))}
+                </div>
+              </div>
 
               <Card className="overflow-hidden p-0">
                 <button
@@ -206,7 +222,7 @@ export function ProfileMenu({
   );
 }
 
-function NavRow({
+function NavTile({
   icon: Icon,
   label,
   onClick,
@@ -222,14 +238,16 @@ function NavRow({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm disabled:cursor-not-allowed disabled:opacity-40"
+      className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left text-sm transition-colors hover:border-primary/40 hover:bg-secondary/40 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border disabled:hover:bg-card"
     >
-      <Icon className="size-4 text-muted-foreground" />
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary">
+        <Icon className="size-4 text-muted-foreground" />
+      </span>
       <span className="flex-1">{label}</span>
       {disabled ? (
-        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Coming soon</span>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Soon</span>
       ) : (
-        <ChevronRight className="size-4 text-muted-foreground" />
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
       )}
     </button>
   );

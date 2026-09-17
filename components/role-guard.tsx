@@ -18,6 +18,15 @@ export function RoleGuard({ role, children }: { role: "SALON_OWNER" | "ADMIN" | 
   const roleLabel = role === "SALON_OWNER" ? "Salon Owner" : role === "ADMIN" ? "Admin" : "Customer";
   const destination = role === "CUSTOMER" ? "this page" : "this dashboard";
 
+  // BUG-014 fix: a hard refresh starts with isAuthenticated false until the
+  // mount-time cookie-restore in useAccount finishes (same race already
+  // handled by app/profile/addresses and app/bookings/claim). Wait for
+  // authChecked before deciding, so a genuinely still-signed-in admin/owner
+  // doesn't see a false "Sign in required" flash on every page load.
+  if (!account.authChecked) {
+    return null;
+  }
+
   if (!account.isAuthenticated) {
     return (
       <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-6 py-16 text-center">

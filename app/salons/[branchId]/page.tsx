@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import type { PublicBranchDetail, PublicPromotion } from "@/lib/types";
+import { SalonImageCarousel } from "@/components/salon-image-carousel";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -134,21 +135,10 @@ export default function SalonDetailsPage() {
 
       {branch && (
         <>
-          {branch.coverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element -- remote, salon-owner-supplied URL; no next.config.js domain allowlist for these yet.
-            <img
-              src={branch.coverImage}
-              alt=""
-              className="h-56 w-full object-cover md:h-72 md:rounded-b-xl lg:h-80 lg:rounded-xl"
-            />
-          ) : (
-            <div className="grid h-56 w-full place-items-center bg-secondary md:h-72 md:rounded-b-xl lg:h-80 lg:rounded-xl">
-              <Store
-                className="size-10 text-muted-foreground"
-                strokeWidth={1.5}
-              />
-            </div>
-          )}
+          <SalonImageCarousel
+            images={Array.from(new Set([branch.coverImage, ...branch.gallery].filter((src): src is string => !!src)))}
+            className="h-56 w-full md:h-72 md:rounded-b-xl lg:h-80 lg:rounded-xl"
+          />
 
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10 lg:px-10 lg:py-8">
             <div className="lg:col-start-2 lg:row-start-1 px-5 md:px-10 lg:px-0">

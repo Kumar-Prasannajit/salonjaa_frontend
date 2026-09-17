@@ -10,15 +10,18 @@ import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 import type { UseAccountReturn } from "@/hooks/use-account";
 
-// 2026-09 rebrand: splash half now uses components/logo.tsx's real crest +
-// Fraunces wordmark instead of styled text with a generic Sparkles glyph.
-// The form panel's visual language (bordered card, brass CTA, brass-outline
-// ghost actions) carries over unchanged from the original dark/brass system.
+// 2026-09 desktop rebuild: this used to be a small centered card floating in
+// an oversized min-h-svh void, which read as a mobile screen stretched into
+// a desktop browser rather than a real desktop page. Now it's one unified
+// split panel (brand half + form half) sized to the space TabsLayout's flex
+// column actually gives it, so it reads as a page section, not an orphaned
+// phone screenshot. authLanding still gates the intro-only (brand-panel-only)
+// moment before the form half slides in, same behavior as before.
 const FEATURES = [
-  { icon: MapPin, label: "Nearby Salons" },
-  { icon: CalendarClock, label: "Easy Booking" },
-  { icon: Gem, label: "Premium Services" },
-  { icon: Lock, label: "Secure Payments" },
+  { icon: MapPin, label: "Nearby Salons", detail: "Discover top-rated salons around you" },
+  { icon: CalendarClock, label: "Easy Booking", detail: "Pick a service, stylist, and slot in minutes" },
+  { icon: Gem, label: "Premium Services", detail: "Curated treatments from vetted professionals" },
+  { icon: Lock, label: "Secure Payments", detail: "Pay online, or at the salon — your choice" },
 ];
 
 type AuthScreenProps = Pick<
@@ -58,48 +61,57 @@ export function AuthScreen({
   const resend = () => sendOtp({ preventDefault: () => {} } as FormEvent);
 
   return (
-    <main className="relative isolate min-h-svh overflow-hidden bg-background">
-      <div
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(ellipse 55% 50% at 12% 85%, color-mix(in srgb, var(--brass) 22%, transparent), transparent 65%)," +
-            "radial-gradient(ellipse 34% 40% at 88% 10%, color-mix(in srgb, var(--brass-bright) 12%, transparent), transparent 70%)",
-        }}
-      />
-
+    <main className="relative isolate flex min-h-[calc(100svh-4.5rem)] items-center bg-background py-10 md:py-16">
       <div
         className={cn(
-          "mx-auto grid min-h-svh w-full max-w-6xl gap-10 px-6 py-16 md:grid-cols-2 md:items-center md:px-12",
+          "mx-auto grid w-full max-w-5xl overflow-hidden rounded-3xl border border-border bg-card shadow-2xl transition-all duration-700 md:grid-cols-2",
           authLanding && "md:grid-cols-1"
         )}
       >
         <section
           className={cn(
-            "flex flex-col items-center gap-6 text-center transition-all duration-700",
-            authLanding ? "animate-in fade-in slide-in-from-bottom-4" : ""
+            "relative flex flex-col justify-between gap-10 overflow-hidden p-8 transition-all duration-700 md:p-14",
+            authLanding ? "animate-in fade-in items-center text-center" : "items-start text-left"
           )}
+          style={{
+            background:
+              "linear-gradient(155deg, color-mix(in srgb, var(--brass) 10%, var(--card)) 0%, var(--card) 55%)",
+          }}
         >
-          <Logo iconClassName="size-16" textClassName="text-3xl" />
-          <h1 className="max-w-sm font-serif text-3xl font-semibold leading-tight text-foreground md:text-4xl">
+          <div
+            className="pointer-events-none absolute -right-16 -top-16 -z-10 size-64 rounded-full opacity-40 blur-3xl"
+            style={{ background: "radial-gradient(circle, var(--brass-bright), transparent 70%)" }}
+          />
+
+          <Logo iconClassName="size-10" textClassName="text-2xl" />
+
+          <h1
+            className={cn(
+              "font-serif font-semibold leading-[1.15] text-foreground",
+              authLanding ? "max-w-lg text-3xl md:text-5xl" : "max-w-sm text-3xl md:text-4xl"
+            )}
+          >
             Beauty, booked the way you like things done.
           </h1>
-          <div className="grid grid-cols-2 gap-3">
-            {FEATURES.map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="flex h-24 w-32 flex-col items-center justify-center gap-2 rounded-xl border border-primary/40 bg-card/40"
-              >
-                <Icon className="size-6 text-accent" strokeWidth={1.5} />
-                <span className="text-[11px] font-medium">{label}</span>
-              </div>
+
+          <ul className={cn("w-full space-y-5", authLanding ? "max-w-sm" : "")}>
+            {FEATURES.map(({ icon: Icon, label, detail }) => (
+              <li key={label} className="flex items-start gap-3.5 text-left">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-primary/40 bg-background/60">
+                  <Icon className="size-4.5 text-accent" strokeWidth={1.5} />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{label}</p>
+                  <p className="text-sm text-muted-foreground">{detail}</p>
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
 
         {!authLanding && (
-          <section className="mx-auto w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 rounded-2xl border border-border bg-card p-8 shadow-2xl">
-            <h2 className="font-serif text-3xl font-semibold">{stage === "email" ? "Let's get you glowing." : "One final step."}</h2>
+          <section className="flex animate-in fade-in slide-in-from-right-4 flex-col justify-center border-t border-border p-8 duration-500 md:border-l md:border-t-0 md:p-14">
+            <h2 className="font-serif text-2xl font-semibold md:text-3xl">{stage === "email" ? "Let's get you glowing." : "One final step."}</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               {stage === "email" ? (
                 "Enter your email address to receive a secure verification code."
