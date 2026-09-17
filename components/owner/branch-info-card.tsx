@@ -22,6 +22,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // doesn't 400 on a value the form itself never mutated.
 const toHHMM = (t: string) => t.slice(0, 5);
 
+const GENDER_SERVED_LABEL: Record<Branch["genderServed"], string> = {
+  UNISEX: "Unisex",
+  MEN: "Men",
+  WOMEN: "Women",
+  KIDS: "Kids",
+};
+
 export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdated: (b: Branch) => void }) {
   const toast = useToastContext();
   const [editing, setEditing] = useState(false);
@@ -150,6 +157,7 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
               <option value="UNISEX">Unisex</option>
               <option value="MEN">Men</option>
               <option value="WOMEN">Women</option>
+              <option value="KIDS">Kids</option>
             </select>
           </div>
           <Button type="submit" disabled={busy} className="sm:col-span-2 bg-gradient-to-r from-brass to-brass-bright text-primary-foreground hover:opacity-90">
@@ -166,7 +174,7 @@ export function BranchInfoCard({ branch, onUpdated }: { branch: Branch; onUpdate
           <p>
             {branch.totalChairs} chairs • {branch.openingTime}–{branch.closingTime}
           </p>
-          <p>{branch.genderServed === "UNISEX" ? "Unisex" : branch.genderServed === "MEN" ? "Men" : "Women"}</p>
+          <p>{GENDER_SERVED_LABEL[branch.genderServed]}</p>
         </div>
       )}
     </Card>

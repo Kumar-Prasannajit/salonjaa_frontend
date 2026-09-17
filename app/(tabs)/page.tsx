@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { Brush, Flower2, Hand, LocateFixed, Palette, Scissors, Search, SlidersHorizontal, Sparkles, Spool, Store } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
-import type { PublicBranchSummary, ServiceCategory } from "@/lib/types";
+import type { PublicBranchSummary, PublicPromotion, ServiceCategory } from "@/lib/types";
 import { useAccountContext } from "@/hooks/account-context";
-import { useGeolocation } from "@/hooks/use-geolocation";
+import { useGeolocationContext } from "@/hooks/geolocation-context";
 import { SalonCard } from "@/components/salon-card";
+import { SalonSectionRow } from "@/components/salon-section-row";
+import { PromoBannerCarousel } from "@/components/promo-banner-carousel";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,15 +42,48 @@ function categoryIcon(icon: string | null): LucideIcon {
   return (icon && CATEGORY_ICONS[icon.trim().toLowerCase()]) || Sparkles;
 }
 
+// Hardcoded per the user's call — these are fixed, curated photos for the
+// 8 known starter categories (src/db/seed/index.ts's STARTER_CATEGORIES on
+// the backend), not a dynamic owner/admin-editable field. Keyed by the same
+// semantic `icon` string as CATEGORY_ICONS above. A category whose icon
+// isn't in this map (a new one added server-side) just falls back to the
+// Lucide icon circle instead of a broken image.
+const CATEGORY_IMAGES: Record<string, string> = {
+  scissors: "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=200&q=70",
+  razor: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=200&q=70",
+  palette: "https://images.unsplash.com/photo-1470259078422-826894b933aa?w=200&q=70",
+  spa: "https://images.unsplash.com/photo-1600334129128-685c5582fd35?w=200&q=70",
+  sparkles: "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=200&q=70",
+  hand: "https://images.unsplash.com/photo-1604654894610-df63bc536371?w=200&q=70",
+  thread: "https://images.unsplash.com/photo-1519415387722-a1c3bbef716c?w=200&q=70",
+  makeup: "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=200&q=70",
+};
+
+function categoryImage(icon: string | null): string | null {
+  return (icon && CATEGORY_IMAGES[icon.trim().toLowerCase()]) || null;
+}
+
+// The naive `hour < 12 ? "Morning" : …` version called 12:30am "Morning" —
+// late night/early morning needs its own bucket instead of falling into
+// whichever neighbor happens to own hour 0.
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 5) return "Night";
+  if (hour < 12) return "Morning";
+  if (hour < 17) return "Afternoon";
+  return "Evening";
+}
+
 export default function HomePage() {
   const router = useRouter();
   const account = useAccountContext();
-  const geo = useGeolocation();
+  const geo = useGeolocationContext();
 
   const [query, setQuery] = useState("");
   const [branches, setBranches] = useState<PublicBranchSummary[] | null>(null);
   const [branchesError, setBranchesError] = useState("");
   const [categories, setCategories] = useState<ServiceCategory[] | null>(null);
+  const [promotions, setPromotions] = useState<PublicPromotion[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +107,27 @@ export default function HomePage() {
       .catch(() => setCategories([]));
   }, []);
 
+  // No branchId = every currently-active, in-range promotion site-wide
+  // (promotion.repository.ts's listActive), for the homepage banner strip —
+  // not scoped to one salon like the detail page's own promotions fetch.
+  useEffect(() => {
+    apiFetch<{ data: PublicPromotion[] }>("/public/promotions", {}, { auth: false })
+      .then((result) => setPromotions(result.data))
+      .catch(() => {
+        // Non-fatal — the rest of Home already loaded fine; the banner
+        // section just stays empty (PromoBannerCarousel renders nothing).
+      });
+  }, []);
+
+  // Client-side split of the same "Popular near you" list — no genderServed
+  // filter exists on GET /public/branches (frontend_handover.md), so this
+  // reuses the one fetch rather than four separate backend calls. A UNISEX
+  // branch genuinely serves everyone, so it's included in both Women's and
+  // Men's rows — KIDS is its own dedicated audience, not folded into either.
+  const womenSalons = (branches || []).filter((b) => b.genderServed === "WOMEN" || b.genderServed === "UNISEX");
+  const menSalons = (branches || []).filter((b) => b.genderServed === "MEN" || b.genderServed === "UNISEX");
+  const kidsSalons = (branches || []).filter((b) => b.genderServed === "KIDS");
+
   const submitSearch = (e: FormEvent) => {
     e.preventDefault();
     router.push(query.trim() ? `/explore?q=${encodeURIComponent(query.trim())}` : "/explore");
@@ -81,7 +137,7 @@ export default function HomePage() {
     <main className="px-5 py-6 md:px-10 md:py-8">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm text-muted-foreground">Good {new Date().getHours() < 12 ? "Morning" : new Date().getHours() < 17 ? "Afternoon" : "Evening"},</p>
+          <p className="text-sm text-muted-foreground">Good {greeting()},</p>
           <p className="font-serif text-2xl font-semibold md:text-3xl">Looking good, as always.</p>
         </div>
         <button type="button" onClick={() => router.push("/profile")} aria-label="Profile">
@@ -95,7 +151,7 @@ export default function HomePage() {
         type="button"
         onClick={geo.request}
         disabled={geo.status === "loading"}
-        className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground disabled:opacity-60"
+        className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground disabled:opacity-60 md:hidden"
       >
         <LocateFixed className="size-3.5 text-primary" />
         {geo.status === "granted"
@@ -107,7 +163,7 @@ export default function HomePage() {
               : "Use my location to sort by distance"}
       </button>
 
-      <form onSubmit={submitSearch} className="mt-4 flex gap-2">
+      <form onSubmit={submitSearch} className="mt-4 flex gap-2 md:hidden">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -156,6 +212,12 @@ export default function HomePage() {
         )}
       </div>
 
+      <PromoBannerCarousel promotions={promotions} />
+
+      <SalonSectionRow title="Salon for Women" subtitle="Pamper yourself at home or in-studio" salons={womenSalons} seeAllHref="/explore?gender=WOMEN" />
+      <SalonSectionRow title="Salon for Men" subtitle="Grooming, styling, and quick refreshes" salons={menSalons} seeAllHref="/explore?gender=MEN" />
+      <SalonSectionRow title="Salon for Kids" subtitle="Patient, playful stylists for little ones" salons={kidsSalons} seeAllHref="/explore?gender=KIDS" />
+
       <div className="mt-10 flex items-center justify-between">
         <h2 className="font-serif text-xl font-semibold md:text-2xl">Top services</h2>
         <button type="button" onClick={() => router.push("/explore")} className="text-sm font-medium text-primary">
@@ -163,9 +225,10 @@ export default function HomePage() {
         </button>
       </div>
 
-      <div className="mt-3 flex gap-4 overflow-x-auto pb-1">
-        {categories === null && Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="size-16 shrink-0 rounded-full" />)}
+      <div className="mt-3 flex justify-center gap-5 overflow-x-auto pb-1 sm:flex-wrap">
+        {categories === null && Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="size-24 shrink-0 rounded-full" />)}
         {categories?.slice(0, 5).map((c) => {
+          const image = categoryImage(c.icon);
           const Icon = categoryIcon(c.icon);
           return (
             <button
@@ -174,17 +237,22 @@ export default function HomePage() {
               onClick={() => router.push(`/explore?serviceCategoryId=${c.id}`)}
               className="flex shrink-0 flex-col items-center gap-2"
             >
-              <span className="grid size-16 place-items-center rounded-full bg-secondary">
-                <Icon className="size-6 text-primary" strokeWidth={1.5} />
+              <span className="grid size-24 place-items-center overflow-hidden rounded-full bg-secondary">
+                {image ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- fixed, hardcoded curated photo, not a remote/owner-supplied field.
+                  <img src={image} alt="" className="size-full object-cover" />
+                ) : (
+                  <Icon className="size-7 text-primary" strokeWidth={1.5} />
+                )}
               </span>
-              <span className="max-w-16 truncate text-xs">{c.name}</span>
+              <span className="max-w-20 truncate text-xs">{c.name}</span>
             </button>
           );
         })}
         {categories && categories.length > 5 && (
           <button type="button" onClick={() => router.push("/explore")} className="flex shrink-0 flex-col items-center gap-2">
-            <span className="grid size-16 place-items-center rounded-full bg-secondary">
-              <Store className="size-6 text-muted-foreground" strokeWidth={1.5} />
+            <span className="grid size-24 place-items-center rounded-full bg-secondary">
+              <Store className="size-7 text-muted-foreground" strokeWidth={1.5} />
             </span>
             <span className="text-xs">More</span>
           </button>

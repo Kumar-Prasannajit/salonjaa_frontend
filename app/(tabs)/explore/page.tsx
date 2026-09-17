@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Search, SearchX } from "lucide-react";
 import { apiFetch, messageFromError } from "@/lib/api-client";
 import type { PublicBranchSummary } from "@/lib/types";
-import { useGeolocation } from "@/hooks/use-geolocation";
+import { useGeolocationContext } from "@/hooks/geolocation-context";
 import { SalonCard } from "@/components/salon-card";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ type SortKey = (typeof SORTS)[number]["key"];
 
 function ExploreContent() {
   const searchParams = useSearchParams();
-  const geo = useGeolocation();
+  const geo = useGeolocationContext();
 
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [debouncedQuery, setDebouncedQuery] = useState(query);
@@ -38,9 +38,26 @@ function ExploreContent() {
   const serviceCategoryId = searchParams.get("serviceCategoryId") || undefined;
   const salonId = searchParams.get("salonId") || undefined;
   const salonName = searchParams.get("salonName") || undefined;
+  // No genderServed filter exists on GET /public/branches (frontend_handover.md)
+  // — applied client-side below over the same fetched list, same reasoning as
+  // the Home page's gender-split sections this deep-links from.
+  const gender = searchParams.get("gender") as "MEN" | "WOMEN" | "KIDS" | null;
 
   const [branches, setBranches] = useState<PublicBranchSummary[] | null>(null);
   const [error, setError] = useState("");
+
+  const visibleBranches =
+    branches && gender
+      ? branches.filter((b) =>
+          gender === "KIDS" ? b.genderServed === "KIDS" : b.genderServed === gender || b.genderServed === "UNISEX"
+        )
+      : branches;
+
+  const GENDER_HEADING: Record<"MEN" | "WOMEN" | "KIDS", string> = {
+    WOMEN: "Salon for Women",
+    MEN: "Salon for Men",
+    KIDS: "Salon for Kids",
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query), 400);
@@ -74,7 +91,9 @@ function ExploreContent() {
 
   return (
     <main className="mx-auto min-h-svh w-full max-w-md bg-background px-5 py-8 md:max-w-2xl md:px-10 md:py-12 lg:max-w-5xl">
-      <h1 className="font-serif text-lg font-semibold md:text-2xl">{salonId ? `${salonName || "Salon"} — Other Branches` : "Nearby Salons"}</h1>
+      <h1 className="font-serif text-lg font-semibold md:text-2xl">
+        {salonId ? `${salonName || "Salon"} — Other Branches` : gender ? GENDER_HEADING[gender] : "Nearby Salons"}
+      </h1>
 
       <div className="relative mt-4">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -115,14 +134,14 @@ function ExploreContent() {
           </>
         )}
 
-        {branches !== null && (
+        {visibleBranches !== null && (
           <p className="text-sm text-primary">
-            {branches.length}
-            {branches.length >= 20 ? "+" : ""} salon{branches.length === 1 ? "" : "s"} found
+            {visibleBranches.length}
+            {visibleBranches.length >= 20 ? "+" : ""} salon{visibleBranches.length === 1 ? "" : "s"} found
           </p>
         )}
 
-        {branches !== null && branches.length === 0 && (
+        {visibleBranches !== null && visibleBranches.length === 0 && (
           <Card className="flex flex-col items-center gap-3 border-dashed p-10 text-center">
             <SearchX className="size-8 text-accent" />
             <p className="font-semibold">No salons found</p>
@@ -133,7 +152,7 @@ function ExploreContent() {
         )}
 
         <div className="grid gap-3 lg:grid-cols-2">
-          {branches?.map((b) => (
+          {visibleBranches?.map((b) => (
             <SalonCard key={b.branchId} branch={b} variant="row" />
           ))}
         </div>

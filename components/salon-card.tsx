@@ -17,6 +17,13 @@ import { Badge } from "@/components/ui/badge";
 // — priceTier/genderServed/activePromotion, rendered below rather than a
 // fabricated discount percentage. `distanceKm` only renders when the caller
 // actually supplied lat/lng (see hooks/use-geolocation.ts) — never guessed.
+export const GENDER_SERVED_BADGE_LABEL: Record<PublicBranchSummary["genderServed"], string> = {
+  UNISEX: "Unisex",
+  MEN: "Men only",
+  WOMEN: "Women only",
+  KIDS: "Kids only",
+};
+
 function CoverImage({ branch, className }: { branch: PublicBranchSummary; className: string }) {
   return branch.coverImage ? (
     // eslint-disable-next-line @next/next/no-img-element -- remote, salon-owner-supplied URLs; no next.config.js domain allowlist exists for these yet.
@@ -48,17 +55,17 @@ function RatingLine({ branch }: { branch: PublicBranchSummary }) {
 // zero/default value — only MEN/WOMEN get a badge, calling out an actually
 // targeted audience.
 function SignalBadges({ branch }: { branch: PublicBranchSummary }) {
-  if (branch.priceTier === null && branch.genderServed === "UNISEX" && !branch.activePromotion) return null;
+  if (branch.startingPrice === null && branch.genderServed === "UNISEX" && !branch.activePromotion) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      {branch.priceTier && (
+      {branch.startingPrice !== null && (
         <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-          {branch.priceTier}
+          Starting ₹{Math.round(branch.startingPrice)}
         </Badge>
       )}
       {branch.genderServed !== "UNISEX" && (
         <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-          {branch.genderServed === "MEN" ? "Men only" : "Women only"}
+          {GENDER_SERVED_BADGE_LABEL[branch.genderServed]}
         </Badge>
       )}
       {branch.activePromotion && (

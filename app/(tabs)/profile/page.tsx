@@ -55,6 +55,7 @@ export default function ProfilePage() {
       onClaimBooking={() => router.push("/bookings/claim")}
       onOpenOwnerDashboard={() => router.push("/owner")}
       onOpenAdminDashboard={() => router.push("/admin")}
+      onOpenPartnerPage={() => router.push("/partner")}
     />
   );
 }

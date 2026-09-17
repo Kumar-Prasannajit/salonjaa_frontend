@@ -59,6 +59,7 @@ type ProfileMenuProps = Pick<
   onClaimBooking: () => void;
   onOpenOwnerDashboard: () => void;
   onOpenAdminDashboard: () => void;
+  onOpenPartnerPage: () => void;
 };
 
 const COMING_SOON = [{ icon: CreditCard, label: "Payment Methods" }] as const;
@@ -88,6 +89,7 @@ export function ProfileMenu({
   onClaimBooking,
   onOpenOwnerDashboard,
   onOpenAdminDashboard,
+  onOpenPartnerPage,
 }: ProfileMenuProps) {
   return (
     <main className="mx-auto w-full px-5 py-8 md:px-0 md:py-14">
@@ -198,6 +200,7 @@ export function ProfileMenu({
               <div>
                 <p className="mb-3 text-sm font-semibold text-muted-foreground">More</p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <NavTile icon={Store} label="Become a Partner" onClick={onOpenPartnerPage} />
                   {COMING_SOON_SECONDARY.map((item) => (
                     <NavTile key={item.label} {...item} disabled />
                   ))}

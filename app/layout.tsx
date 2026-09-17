@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/hooks/toast-context";
 import { AccountProvider } from "@/hooks/account-context";
 import { BookingDraftProvider } from "@/hooks/booking-draft-context";
+import { GeolocationProvider } from "@/hooks/geolocation-context";
 
 // 2026-09 rebrand (Salonjaa -> Book My Charm): Fraunces is the warm,
 // old-style display serif carrying the brand's crest-and-crown personality
@@ -46,7 +47,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <ToastProvider>
             <AccountProvider>
-              <BookingDraftProvider>{children}</BookingDraftProvider>
+              <GeolocationProvider>
+                <BookingDraftProvider>{children}</BookingDraftProvider>
+              </GeolocationProvider>
             </AccountProvider>
           </ToastProvider>
         </ThemeProvider>

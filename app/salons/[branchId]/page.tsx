@@ -14,6 +14,7 @@ import {
 import { apiFetch, ApiError, messageFromError } from "@/lib/api-client";
 import type { PublicBranchDetail, PublicPromotion } from "@/lib/types";
 import { SalonImageCarousel } from "@/components/salon-image-carousel";
+import { GENDER_SERVED_BADGE_LABEL } from "@/components/salon-card";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -163,16 +164,14 @@ export default function SalonDetailsPage() {
                 {/* Module 21 — same signals as components/salon-card.tsx's listing
                   row, minus activePromotion (listing-card only). UNISEX is the
                   unmarked default, same reasoning as that component. */}
-                {(branch.priceTier || branch.genderServed !== "UNISEX") && (
+                {(branch.startingPrice !== null || branch.genderServed !== "UNISEX") && (
                   <div className="mt-1.5 flex gap-1.5">
-                    {branch.priceTier && (
-                      <Badge variant="outline">{branch.priceTier}</Badge>
+                    {branch.startingPrice !== null && (
+                      <Badge variant="outline">Starting ₹{Math.round(branch.startingPrice)}</Badge>
                     )}
                     {branch.genderServed !== "UNISEX" && (
                       <Badge variant="outline">
-                        {branch.genderServed === "MEN"
-                          ? "Men only"
-                          : "Women only"}
+                        {GENDER_SERVED_BADGE_LABEL[branch.genderServed]}
                       </Badge>
                     )}
                   </div>

@@ -71,9 +71,13 @@ export type PublicBranchSummary = {
   // active-service price, no owner input. `null` only if the branch
   // somehow has zero active services.
   priceTier: "₹" | "₹₹" | "₹₹₹" | null;
+  // Real cheapest-active-service figure — "Starting ₹X" on the card/detail hero, not a
+  // fabricated number. null under the same condition as priceTier (no active services).
+  startingPrice: number | null;
   // Module 21 — owner-set per branch (defaults `UNISEX`), settable via the
   // existing POST /branches/PATCH /branches/:id body — no new endpoint.
-  genderServed: "UNISEX" | "MEN" | "WOMEN";
+  // KIDS added later (decided with the user) for children-focused branches.
+  genderServed: "UNISEX" | "MEN" | "WOMEN" | "KIDS";
   // Module 21 — listing-card only, not present on PublicBranchDetail below
   // (which already has the full list via GET /public/promotions?branchId=).
   // Only set when the owner has explicitly flagged one of the branch's
@@ -403,8 +407,9 @@ export type Branch = {
   // Module 21 — owner-set (defaults UNISEX), settable via the existing
   // POST /branches/PATCH /branches/:id body (frontend_handover.md's new
   // optional `genderServed` field, no new endpoint) — drives the same-name
-  // listing-card/detail signal in PublicBranchSummary/Detail above.
-  genderServed: "UNISEX" | "MEN" | "WOMEN";
+  // listing-card/detail signal in PublicBranchSummary/Detail above. KIDS
+  // added later (decided with the user) for children-focused branches.
+  genderServed: "UNISEX" | "MEN" | "WOMEN" | "KIDS";
 };
 
 export type BranchHoliday = { id: string; date: string; reason: string | null };
